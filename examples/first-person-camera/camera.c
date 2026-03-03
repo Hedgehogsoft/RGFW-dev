@@ -56,7 +56,7 @@ int main(void) {
     RGFW_event event;
     while (RGFW_window_shouldClose(win) == 0) {
         while (RGFW_window_checkEvent(win, &event)) {
-            if (event.type == RGFW_quit)
+            if (event.type == RGFW_windowClose)
                 break;
 
             switch (event.type) {
@@ -102,7 +102,7 @@ int main(void) {
             }
         }
 
-        if (event.type == RGFW_quit)
+        if (event.type == RGFW_windowClose)
             break;
 
         if (RGFW_isKeyDown(RGFW_w)) {

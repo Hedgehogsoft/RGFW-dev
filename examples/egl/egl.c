@@ -13,10 +13,9 @@
 #include <GL/gl.h>
 #endif
 
-void keyfunc(RGFW_window* win, RGFW_key key, RGFW_keymod keyMod, RGFW_bool repeat, RGFW_bool pressed) {
-    RGFW_UNUSED(keyMod); RGFW_UNUSED(win); RGFW_UNUSED(repeat);
-    if (key == RGFW_escape && pressed) {
-        RGFW_window_setShouldClose(win, 1);
+void keyfunc(const RGFW_keyEvent* e) {
+    if (e->value == RGFW_escape && e->state) {
+        RGFW_window_setShouldClose(e->win, 1);
     }
 }
 
@@ -28,7 +27,7 @@ int main(void) {
 
 	RGFW_window* win = RGFW_createWindow("a window", 0, 0, 800, 600, RGFW_windowEGL | RGFW_windowCenter | RGFW_windowNoResize | RGFW_windowTransparent);
     RGFW_window_makeCurrentContext_EGL(win);
-    RGFW_setKeyCallback(keyfunc); // you can use callbacks like this if you want
+    RGFW_setKeyCallback((RGFW_genericfunc)keyfunc); // you can use callbacks like this if you want
     RGFW_window_setExitKey(win, RGFW_escape);
 
     while (RGFW_window_shouldClose(win) == RGFW_FALSE) {

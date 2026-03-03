@@ -55,7 +55,7 @@
 	#define RGFW_COCOA_GRAPHICS_SWITCHING - (optional) (cocoa) use automatic graphics switching (allow the system to choose to use GPU or iGPU)
 	#define RGFW_COCOA_FRAME_NAME (optional) (cocoa) set frame name
 	#define RGFW_NO_DPI - do not calculate DPI and don't use libShcore (win32)
-	#define RGFW_NO_XRANDR - do use XRandr (X11)
+	#define RGFW_NO_XRANDR - do use not XRandr (X11)
 	#define RGFW_ADVANCED_SMOOTH_RESIZE - use advanced methods for smooth resizing (may result in a spike in memory usage or worse performance) (eg. WM_TIMER and XSyncValue)
 	#define RGFW_NO_INFO - do not define the RGFW_info struct (without RGFW_IMPLEMENTATION)
 	#define RGFW_NO_GLXWINDOW - do not use GLXWindow
@@ -92,7 +92,7 @@ int main() {
 
 	while (RGFW_window_shouldClose(win) == RGFW_FALSE) {
 		while (RGFW_window_checkEvent(win, &event)) {
-			if (event.type == RGFW_quit)
+			if (event.type == RGFW_windowClose)
 				break;
 		}
 	}
@@ -680,37 +680,19 @@ typedef RGFW_ENUM(u8, RGFW_eventType) {
 	RGFW_mouseButtonReleased, /*!< a mouse button has been released (left,middle,right) */
 	RGFW_mouseScroll, /*!< a mouse scroll event */
 	RGFW_mousePosChanged, /*!< the position of the mouse has been changed */
-	/*! mouse event note
-		the x and y of the mouse can be found in the vector, RGFW_x, y
-
-		RGFW_event.button.value holds which mouse button was pressed
-	*/
+	RGFW_mouseEnter, /*!< mouse entered the window */
+	RGFW_mouseLeave, /*!< mouse left the window */
 	RGFW_windowMoved, /*!< the window was moved (by the user) */
 	RGFW_windowResized, /*!< the window was resized (by the user), [on WASM this means the browser was resized] */
-	RGFW_focusIn, /*!< window is in focus now */
-	RGFW_focusOut, /*!< window is out of focus now */
-	RGFW_mouseEnter, /* mouse entered the window */
-	RGFW_mouseLeave, /* mouse left the window */
-	RGFW_windowRefresh, /* The window content needs to be refreshed */
-
-	/* attribs change event note
-		The event data is sent straight to the window structure
-		with win->x, win->y, win->w and win->h
-	*/
-	RGFW_quit, /*!< the user clicked the quit button */
-	RGFW_dataDrop, /*!< a file has been dropped into the window */
-	RGFW_dataDrag, /*!< the start of a drag and drop event, when the file is being dragged */
-	/* drop data note
-		The x and y coords of the drop are stored in the vector RGFW_x, y
-
-		RGFW_event.drop.count holds how many files were dropped
-
-		This is also the size of the array which stores all the dropped file string,
-		RGFW_event.drop.files
-	*/
+	RGFW_windowFocusIn, /*!< window is in focus now */
+	RGFW_windowFocusOut, /*!< window is out of focus now */
+	RGFW_windowRefresh, /*!< The window content needs to be refreshed */
+	RGFW_windowClose, /*!< the user attempts to close the window */
 	RGFW_windowMaximized, /*!< the window was maximized */
 	RGFW_windowMinimized, /*!< the window was minimized */
 	RGFW_windowRestored, /*!< the window was restored */
+	RGFW_dataDrop, /*!< a file has been dropped into the window */
+	RGFW_dataDrag, /*!< the start of a drag and drop event, when the file is being dragged */
 	RGFW_scaleUpdated, /*!< content scale factor changed */
 	RGFW_monitorConnected, /*!< a monitor has been connected */
 	RGFW_monitorDisconnected /*!< a monitor has been disconnected */
@@ -729,14 +711,14 @@ typedef RGFW_ENUM(u32, RGFW_eventFlag) {
     RGFW_mouseLeaveFlag = RGFW_BIT(RGFW_mouseLeave),
     RGFW_windowMovedFlag = RGFW_BIT(RGFW_windowMoved),
     RGFW_windowResizedFlag = RGFW_BIT(RGFW_windowResized),
-    RGFW_focusInFlag = RGFW_BIT(RGFW_focusIn),
-    RGFW_focusOutFlag = RGFW_BIT(RGFW_focusOut),
+    RGFW_windowFocusInFlag = RGFW_BIT(RGFW_windowFocusIn),
+    RGFW_windowFocusOutFlag = RGFW_BIT(RGFW_windowFocusOut),
     RGFW_windowRefreshFlag = RGFW_BIT(RGFW_windowRefresh),
     RGFW_windowMaximizedFlag = RGFW_BIT(RGFW_windowMaximized),
     RGFW_windowMinimizedFlag = RGFW_BIT(RGFW_windowMinimized),
     RGFW_windowRestoredFlag = RGFW_BIT(RGFW_windowRestored),
     RGFW_scaleUpdatedFlag = RGFW_BIT(RGFW_scaleUpdated),
-    RGFW_quitFlag = RGFW_BIT(RGFW_quit),
+    RGFW_windowCloseFlag = RGFW_BIT(RGFW_windowClose),
     RGFW_dataDropFlag = RGFW_BIT(RGFW_dataDrop),
     RGFW_dataDragFlag = RGFW_BIT(RGFW_dataDrag),
 	RGFW_monitorConnectedFlag = RGFW_BIT(RGFW_monitorConnected),
@@ -745,10 +727,10 @@ typedef RGFW_ENUM(u32, RGFW_eventFlag) {
     RGFW_keyEventsFlag = RGFW_keyPressedFlag | RGFW_keyReleasedFlag | RGFW_keyCharFlag,
     RGFW_mouseEventsFlag = RGFW_mouseButtonPressedFlag | RGFW_mouseButtonReleasedFlag | RGFW_mousePosChangedFlag | RGFW_mouseEnterFlag | RGFW_mouseLeaveFlag | RGFW_mouseScrollFlag ,
     RGFW_windowEventsFlag = RGFW_windowMovedFlag | RGFW_windowResizedFlag | RGFW_windowRefreshFlag | RGFW_windowMaximizedFlag | RGFW_windowMinimizedFlag | RGFW_windowRestoredFlag | RGFW_scaleUpdatedFlag,
-    RGFW_focusEventsFlag = RGFW_focusInFlag | RGFW_focusOutFlag,
+    RGFW_windowFocusEventsFlag = RGFW_windowFocusInFlag | RGFW_windowFocusOutFlag,
     RGFW_dataDropEventsFlag = RGFW_dataDropFlag | RGFW_dataDragFlag,
 	RGFW_monitorEventsFlag = RGFW_monitorConnectedFlag | RGFW_monitorDisconnectedFlag,
-    RGFW_allEventFlags = RGFW_keyEventsFlag | RGFW_mouseEventsFlag | RGFW_windowEventsFlag | RGFW_focusEventsFlag | RGFW_dataDropEventsFlag | RGFW_quitFlag | RGFW_monitorEventsFlag
+    RGFW_allEventFlags = RGFW_keyEventsFlag | RGFW_mouseEventsFlag | RGFW_windowEventsFlag | RGFW_windowFocusEventsFlag | RGFW_dataDropEventsFlag | RGFW_windowCloseFlag | RGFW_monitorEventsFlag
 };
 
 /*! Event structure(s) and union for checking/getting events */
@@ -759,11 +741,19 @@ typedef struct RGFW_commonEvent {
 	RGFW_window* win; /*!< the window this event applies to (for event queue events) */
 } RGFW_commonEvent;
 
+/*! @brief event data for all focus events */
+typedef struct RGFW_windowFocusEvent {
+	RGFW_eventType type; /*!< which event has been sent?*/
+	RGFW_window* win; /*!< the window this event applies to (for event queue events) */
+	RGFW_bool state; /*!< wether or not the window is in focus or not */
+} RGFW_windowFocusEvent;
+
 /*! @brief event data for any mouse button event (press/release) */
 typedef struct RGFW_mouseButtonEvent {
 	RGFW_eventType type; /*!< which event has been sent?*/
 	RGFW_window* win; /*!< the window this event applies to (for event queue events) */
 	RGFW_mouseButton value; /* !< which mouse button was pressed */
+	RGFW_bool state; /*!< if the button was pressed or released */
 } RGFW_mouseButtonEvent;
 
 /*! @brief event data for any mouse scroll event */
@@ -779,6 +769,7 @@ typedef struct RGFW_mousePosEvent {
 	RGFW_window* win; /*!< the window this event applies to (for event queue events) */
 	i32 x, y; /*!< mouse x, y of event (or drop point) */
 	float vecX, vecY; /*!< raw mouse movement */
+	RGFW_bool inWindow; /*!< if the mouse is in the window or not */
 } RGFW_mousePosEvent;
 
 /*! @brief event data for a key press/release event */
@@ -787,7 +778,8 @@ typedef struct RGFW_keyEvent {
 	RGFW_window* win; /*!< the window this event applies to (for event queue events) */
 	RGFW_key value; /*!< the physical key of the event, refers to where key is physically */
 	RGFW_bool repeat; /*!< key press event repeated (the key is being held) */
-	RGFW_keymod mod;
+	RGFW_keymod mod; /*!< state of the key modifier state */
+	RGFW_bool state; /*!< if the key was pressed or released */
 } RGFW_keyEvent;
 
 /*! @brief event data for a key character event */
@@ -802,7 +794,7 @@ typedef struct RGFW_dataDropEvent {
 	RGFW_eventType type; /*!< which event has been sent?*/
 	RGFW_window* win; /*!< the window this event applies to (for event queue events) */
 	/* 260 max paths with a max length of 260 */
-	char** files; /*!< dropped files */
+	char** value; /*!< dropped files */
 	size_t count; /*!< how many files were dropped */
 } RGFW_dataDropEvent;
 
@@ -825,12 +817,25 @@ typedef struct RGFW_monitorEvent {
 	RGFW_eventType type; /*!< which event has been sent?*/
 	RGFW_window* win; /*!< the window this event applies to (for event queue events) */
 	const RGFW_monitor* monitor; /*!< the monitor that this event applies to */
+	RGFW_bool state; /*!< if the monitor is connected or disconnected */
 } RGFW_monitorEvent;
+
+/*! @breif event data for when the window is updated, moved, resized or refreshed */
+typedef struct RGFW_windowUpdateEvent {
+	RGFW_eventType type; /*!< the specific event type */
+	RGFW_window* win; /*!< the window that was updated */
+	i32 x; /*!< the new window x OR the x of the rectanglular refresh area */
+	i32 y; /*!< the new window y OR the y of the rectanglular refresh area */
+	i32 w; /*!< the new window width OR the width of the rectanglular refresh area */
+	i32 h; /*!< the new window height OR the height of the rectanglular refresh area */
+} RGFW_windowUpdateEvent;
 
 /*! @brief union for all of the event stucture types */
 typedef union RGFW_event {
 	RGFW_eventType type; /*!< which event has been sent?*/
 	RGFW_commonEvent common; /*!< common event data (e.g.) type and win */
+	RGFW_windowFocusEvent focus; /*!< event data  for focus in/out events */
+	RGFW_windowUpdateEvent update; /*!< data for window update/move/resize/refresh events */
 	RGFW_mouseButtonEvent button; /*!< data for a button press/release */
 	RGFW_mouseScrollEvent scroll; /*!< data for a mouse scroll */
 	RGFW_mousePosEvent mouse; /*!< data for mouse motion events */
@@ -949,43 +954,46 @@ typedef RGFW_ENUM(u8, RGFW_errorCode) {
 typedef void (* RGFW_debugfunc)(RGFW_debugType type, RGFW_errorCode err, const char* msg);
 
 /*! @brief RGFW_windowMoved, the window and its new rect value  */
-typedef void (* RGFW_windowMovedfunc)(RGFW_window* win, i32 x, i32 y);
+typedef void (* RGFW_windowMovedfunc)(const RGFW_windowUpdateEvent* e);
 /*! @brief RGFW_windowResized, the window and its new rect value  */
-typedef void (* RGFW_windowResizedfunc)(RGFW_window* win, i32 w, i32 h);
+typedef void (* RGFW_windowResizedfunc)(const RGFW_windowUpdateEvent* e);
 /*! @brief RGFW_windowRestored, the window and its new rect value  */
-typedef void (* RGFW_windowRestoredfunc)(RGFW_window* win, i32 x, i32 y, i32 w, i32 h);
+typedef void (* RGFW_windowRestoredfunc)(const RGFW_windowUpdateEvent* e);
 /*! @brief RGFW_windowMaximized, the window and its new rect value  */
-typedef void (* RGFW_windowMaximizedfunc)(RGFW_window* win, i32 x, i32 y, i32 w, i32 h);
+typedef void (* RGFW_windowMaximizedfunc)(const RGFW_windowUpdateEvent* e);
 /*! @brief RGFW_windowMinimized, the window and its new rect value  */
-typedef void (* RGFW_windowMinimizedfunc)(RGFW_window* win);
-/*! @brief RGFW_quit, the window that was closed */
-typedef void (* RGFW_windowQuitfunc)(RGFW_window* win);
-/*! @brief RGFW_focusIn / RGFW_focusOut, the window who's focus has changed and if its in focus */
-typedef void (* RGFW_focusfunc)(RGFW_window* win, RGFW_bool inFocus);
+typedef void (* RGFW_windowMinimizedfunc)(const RGFW_windowUpdateEvent* e);
+/*! @brief RGFW_windowClose, the window that was closed */
+typedef void (* RGFW_windowClosefunc)(const RGFW_commonEvent* e);
+/*! @brief RGFW_windowFocusIn / RGFW_windowFocusOut, the window who's focus has changed and if its in focus */
+typedef void (* RGFW_windowFocusfunc)(const RGFW_windowFocusEvent* e);
 /*! @brief RGFW_mouseEnter / RGFW_mouseLeave, the window that changed, the point of the mouse (enter only) and if the mouse has entered */
-typedef void (* RGFW_mouseNotifyfunc)(RGFW_window* win, i32 x, i32 y, RGFW_bool status);
+typedef void (* RGFW_mouseNotifyfunc)(const RGFW_mousePosEvent* e);
 /*! @brief RGFW_mousePosChanged, the window that the move happened on, and the new point of the mouse  */
-typedef void (* RGFW_mousePosfunc)(RGFW_window* win, i32 x, i32 y, float vecX, float vecY);
+typedef void (* RGFW_mousePosfunc)(const RGFW_mousePosEvent* e);
 /*! @brief RGFW_dataDrag, the window, the point of the drop on the windows */
-typedef void (* RGFW_dataDragfunc)(RGFW_window* win, i32 x, i32 y);
+typedef void (* RGFW_dataDragfunc)(const RGFW_dataDragEvent* e);
 /*! @brief RGFW_windowRefresh, the window that needs to be refreshed */
-typedef void (* RGFW_windowRefreshfunc)(RGFW_window* win);
+typedef void (* RGFW_windowRefreshfunc)(const RGFW_windowUpdateEvent* e);
 /*! @brief RGFW_keyChar, the window that got the event, the unicode key value */
-typedef void (* RGFW_keyCharfunc)(RGFW_window* win, u32 codepoint);
+typedef void (* RGFW_keyCharfunc)(const RGFW_keyCharEvent* e);
 /*! @brief RGFW_mouseButtonPressed / RGFW_mouseButtonReleased, the window that got the event, the button that was pressed, the scroll value, if it was a press (else it's a release)  */
 
 /*! @brief RGFW_keyPressed / RGFW_keyReleased, the window that got the event, the mapped key, the physical key, the string version, the state of the mod keys, if it was a press (else it's a release) */
-typedef void (* RGFW_keyfunc)(RGFW_window* win, u8 key, RGFW_keymod mod, RGFW_bool repeat, RGFW_bool pressed);
+typedef void (* RGFW_keyfunc)(const RGFW_keyEvent* e);
 /*! @brief RGFW_mouseButtonPressed / RGFW_mouseButtonReleased, the window that got the event, the button that was pressed, the scroll value, if it was a press (else it's a release)  */
-typedef void (* RGFW_mouseButtonfunc)(RGFW_window* win, RGFW_mouseButton button, RGFW_bool pressed);
+typedef void (* RGFW_mouseButtonfunc)(const RGFW_mouseButtonEvent* e);
 /*! @brief RGFW_mouseScroll, the window that got the event, the x scroll value, the y scroll value */
-typedef void (* RGFW_mouseScrollfunc)(RGFW_window* win, float x, float y);
+typedef void (* RGFW_mouseScrollfunc)(const RGFW_mouseScrollEvent* e);
 /*! @brief RGFW_dataDrop the window that had the drop, the drop data and the number of files dropped */
-typedef void (* RGFW_dataDropfunc)(RGFW_window* win, char** files, size_t count);
+typedef void (* RGFW_dataDropfunc)(const RGFW_dataDropEvent* e);
 /*! @brief RGFW_scaleUpdated, the window the event was sent to, content scaleX, content scaleY */
-typedef void (* RGFW_scaleUpdatedfunc)(RGFW_window* win, float scaleX, float scaleY);
+typedef void (* RGFW_scaleUpdatedfunc)(const RGFW_scaleUpdatedEvent* e);
 /*! @brief RGFW_monitorConnected / RGFW_monitorDisconnected, there was a monitor connected/disconnected */
-typedef void (* RGFW_monitorfunc)(RGFW_window* win, const RGFW_monitor* monitor, RGFW_bool connected);
+typedef void (* RGFW_monitorfunc)(const RGFW_monitorEvent* e);
+
+/*! @brief generic event callback function type */
+typedef void (*RGFW_genericfunc)(const RGFW_event* e);
 
 /*! @brief function pointer equivalent of void* */
 typedef void (*RGFW_proc)(void);
@@ -2281,7 +2289,7 @@ RGFWDEF void RGFW_writeClipboard(const char* text, u32 textLen);
  * @param func The function pointer to be used as the debug callback.
  * @return The previously set debug callback function.
 */
-RGFWDEF RGFW_debugfunc RGFW_setDebugCallback(RGFW_debugfunc func);
+//RGFWDEF RGFW_debugfunc RGFW_setDebugCallback(RGFW_debugfunc func);
 
 /**!
  * @brief Sends a debug message manually through the currently set debug callback.
@@ -2308,126 +2316,126 @@ RGFWDEF void RGFW_sendDebugInfo(RGFW_debugType type, RGFW_errorCode err, const c
  * @param func The function to be called when the window is moved.
  * @return The previously set callback function, if any.
 */
-RGFWDEF RGFW_windowMovedfunc RGFW_setWindowMovedCallback(RGFW_windowMovedfunc func);
+RGFWDEF RGFW_windowMovedfunc RGFW_setWindowMovedCallback(RGFW_genericfunc func);
 
 /**!
  * @brief Sets the callback function for window resize events.
  * @param func The function to be called when the window is resized.
  * @return The previously set callback function, if any.
 */
-RGFWDEF RGFW_windowResizedfunc RGFW_setWindowResizedCallback(RGFW_windowResizedfunc func);
+RGFWDEF RGFW_windowResizedfunc RGFW_setWindowResizedCallback(RGFW_genericfunc func);
 
 /**!
- * @brief Sets the callback function for window quit events.
- * @param func The function to be called when the window receives a quit signal.
+ * @brief Sets the callback function for window close events.
+ * @param func The function to be called when the window receives a close signal.
  * @return The previously set callback function, if any.
 */
-RGFWDEF RGFW_windowQuitfunc RGFW_setWindowQuitCallback(RGFW_windowQuitfunc func);
+RGFWDEF RGFW_windowClosefunc RGFW_setWindowCloseCallback(RGFW_genericfunc func);
 
 /**!
  * @brief Sets the callback function for mouse move events.
  * @param func The function to be called when the mouse moves within the window.
  * @return The previously set callback function, if any.
 */
-RGFWDEF RGFW_mousePosfunc RGFW_setMousePosCallback(RGFW_mousePosfunc func);
+RGFWDEF RGFW_mousePosfunc RGFW_setMousePosCallback(RGFW_genericfunc func);
 
 /**!
  * @brief Sets the callback function for window refresh events.
  * @param func The function to be called when the window needs to be refreshed.
  * @return The previously set callback function, if any.
 */
-RGFWDEF RGFW_windowRefreshfunc RGFW_setWindowRefreshCallback(RGFW_windowRefreshfunc func);
+RGFWDEF RGFW_windowRefreshfunc RGFW_setWindowRefreshCallback(RGFW_genericfunc func);
 
 /**!
  * @brief Sets the callback function for focus change events.
  * @param func The function to be called when the window gains or loses focus.
  * @return The previously set callback function, if any.
 */
-RGFWDEF RGFW_focusfunc RGFW_setFocusCallback(RGFW_focusfunc func);
+RGFWDEF RGFW_windowFocusfunc RGFW_setWindowFocusCallback(RGFW_genericfunc func);
 
 /**!
  * @brief Sets the callback function for mouse notification events.
  * @param func The function to be called when a mouse notification event occurs.
  * @return The previously set callback function, if any.
 */
-RGFWDEF RGFW_mouseNotifyfunc RGFW_setMouseNotifyCallback(RGFW_mouseNotifyfunc func);
+RGFWDEF RGFW_mouseNotifyfunc RGFW_setMouseNotifyCallback(RGFW_genericfunc func);
 
 /**!
  * @brief Sets the callback function for data drop events.
  * @param func The function to be called when data is dropped into the window.
  * @return The previously set callback function, if any.
 */
-RGFWDEF RGFW_dataDropfunc RGFW_setDataDropCallback(RGFW_dataDropfunc func);
+RGFWDEF RGFW_dataDropfunc RGFW_setDataDropCallback(RGFW_genericfunc func);
 
 /**!
  * @brief Sets the callback function for the start of a data drag event.
  * @param func The function to be called when data dragging begins.
  * @return The previously set callback function, if any.
 */
-RGFWDEF RGFW_dataDragfunc RGFW_setDataDragCallback(RGFW_dataDragfunc func);
+RGFWDEF RGFW_dataDragfunc RGFW_setDataDragCallback(RGFW_genericfunc func);
 
 /**!
  * @brief Sets the callback function for key press and release events.
  * @param func The function to be called when a key is pressed or released.
  * @return The previously set callback function, if any.
 */
-RGFWDEF RGFW_keyfunc RGFW_setKeyCallback(RGFW_keyfunc func);
+RGFWDEF RGFW_keyfunc RGFW_setKeyCallback(RGFW_genericfunc func);
 
 /**!
  * @brief Sets the callback function for key character events.
  * @param func The function to be called when a key is pressed or released.
  * @return The previously set callback function, if any.
 */
-RGFWDEF RGFW_keyCharfunc RGFW_setKeyCharCallback(RGFW_keyCharfunc func);
+RGFWDEF RGFW_keyCharfunc RGFW_setKeyCharCallback(RGFW_genericfunc func);
 
 /**!
  * @brief Sets the callback function for mouse button press and release events.
  * @param func The function to be called when a mouse button is pressed or released.
  * @return The previously set callback function, if any.
 */
-RGFWDEF RGFW_mouseButtonfunc RGFW_setMouseButtonCallback(RGFW_mouseButtonfunc func);
+RGFWDEF RGFW_mouseButtonfunc RGFW_setMouseButtonCallback(RGFW_genericfunc func);
 
 /**!
  * @brief Sets the callback function for mouse scroll events.
  * @param func The function to be called when the mouse wheel is scrolled.
  * @return The previously set callback function, if any.
 */
-RGFWDEF RGFW_mouseScrollfunc RGFW_setMouseScrollCallback(RGFW_mouseScrollfunc func);
+RGFWDEF RGFW_mouseScrollfunc RGFW_setMouseScrollCallback(RGFW_genericfunc func);
 
 /**!
  * @brief Sets the callback function for window maximize events.
  * @param func The function to be called when the window is maximized.
  * @return The previously set callback function, if any.
 */
-RGFWDEF RGFW_windowMaximizedfunc RGFW_setWindowMaximizedCallback(RGFW_windowMaximizedfunc func);
+RGFWDEF RGFW_windowMaximizedfunc RGFW_setWindowMaximizedCallback(RGFW_genericfunc func);
 
 /**!
  * @brief Sets the callback function for window minimize events.
  * @param func The function to be called when the window is minimized.
  * @return The previously set callback function, if any.
 */
-RGFWDEF RGFW_windowMinimizedfunc RGFW_setWindowMinimizedCallback(RGFW_windowMinimizedfunc func);
+RGFWDEF RGFW_windowMinimizedfunc RGFW_setWindowMinimizedCallback(RGFW_genericfunc func);
 
 /**!
  * @brief Sets the callback function for window restore events.
  * @param func The function to be called when the window is restored from a minimized or maximized state.
  * @return The previously set callback function, if any.
 */
-RGFWDEF RGFW_windowRestoredfunc RGFW_setWindowRestoredCallback(RGFW_windowRestoredfunc func);
+RGFWDEF RGFW_windowRestoredfunc RGFW_setWindowRestoredCallback(RGFW_genericfunc func);
 
 /**!
  * @brief Sets the callback function for DPI (scale) update events.
  * @param func The function to be called when the window’s DPI or scale changes.
  * @return The previously set callback function, if any.
 */
-RGFWDEF RGFW_scaleUpdatedfunc RGFW_setScaleUpdatedCallback(RGFW_scaleUpdatedfunc func);
+RGFWDEF RGFW_scaleUpdatedfunc RGFW_setScaleUpdatedCallback(RGFW_genericfunc func);
 
 /**!
  * @brief Sets the callback function for monitor connected and disconnect events.
  * @param func The function to be called when a monitor is connected or disconnected.
  * @return The previously set callback function, if any.
 */
-RGFWDEF RGFW_monitorfunc RGFW_setMonitorCallback(RGFW_monitorfunc func);
+RGFWDEF RGFW_monitorfunc RGFW_setMonitorCallback(RGFW_genericfunc func);
 
 /** @} */
 
@@ -3331,10 +3339,10 @@ RGFWDEF void RGFW_windowMinimizedCallback(RGFW_window* win);
 RGFWDEF void RGFW_windowRestoredCallback(RGFW_window* win, i32 x, i32 y, i32 w, i32 h);
 RGFWDEF void RGFW_windowMovedCallback(RGFW_window* win, i32 x, i32 y);
 RGFWDEF void RGFW_windowResizedCallback(RGFW_window* win, i32 w, i32 h);
-RGFWDEF void RGFW_windowQuitCallback(RGFW_window* win);
+RGFWDEF void RGFW_windowCloseCallback(RGFW_window* win);
 RGFWDEF void RGFW_mousePosCallback(RGFW_window* win, i32 x, i32 y, float vecX, float vecY);
-RGFWDEF void RGFW_windowRefreshCallback(RGFW_window* win);
-RGFWDEF void RGFW_focusCallback(RGFW_window* win, RGFW_bool inFocus);
+RGFWDEF void RGFW_windowRefreshCallback(RGFW_window* win, i32 x, i32 y, i32 w, i32 h);
+RGFWDEF void RGFW_windowFocusCallback(RGFW_window* win, RGFW_bool inFocus);
 RGFWDEF void RGFW_mouseNotifyCallback(RGFW_window* win, i32 x, i32 y, RGFW_bool status);
 RGFWDEF void RGFW_dataDropCallback(RGFW_window* win, char** files, size_t count);
 RGFWDEF void RGFW_dataDragCallback(RGFW_window* win, i32 x, i32 y);
@@ -3480,9 +3488,9 @@ void RGFW_resetKey(void) { RGFW_MEMSET(_RGFW->keyboard, 0, sizeof(_RGFW->keyboar
 */
 #define RGFW_CALLBACK_DEFINE(x, x2) \
 RGFW_##x##func RGFW_##x##CallbackSrc = NULL; \
-RGFW_##x##func RGFW_set##x2##Callback(RGFW_##x##func func) { \
+RGFW_##x##func RGFW_set##x2##Callback(RGFW_genericfunc func) { \
     RGFW_##x##func prev = RGFW_##x##CallbackSrc; \
-    RGFW_##x##CallbackSrc = func; \
+    RGFW_##x##CallbackSrc = (RGFW_##x##func)func; \
     return prev; \
 }
 
@@ -3491,10 +3499,10 @@ RGFW_CALLBACK_DEFINE(windowMinimized, WindowMinimized)
 RGFW_CALLBACK_DEFINE(windowRestored, WindowRestored)
 RGFW_CALLBACK_DEFINE(windowMoved, WindowMoved)
 RGFW_CALLBACK_DEFINE(windowResized, WindowResized)
-RGFW_CALLBACK_DEFINE(windowQuit, WindowQuit)
+RGFW_CALLBACK_DEFINE(windowClose, WindowClose)
 RGFW_CALLBACK_DEFINE(mousePos, MousePos)
 RGFW_CALLBACK_DEFINE(windowRefresh, WindowRefresh)
-RGFW_CALLBACK_DEFINE(focus, Focus)
+RGFW_CALLBACK_DEFINE(windowFocus, WindowFocus)
 RGFW_CALLBACK_DEFINE(mouseNotify, MouseNotify)
 RGFW_CALLBACK_DEFINE(dataDrop, DataDrop)
 RGFW_CALLBACK_DEFINE(dataDrag, DataDrag)
@@ -3504,21 +3512,27 @@ RGFW_CALLBACK_DEFINE(mouseButton, MouseButton)
 RGFW_CALLBACK_DEFINE(mouseScroll, MouseScroll)
 RGFW_CALLBACK_DEFINE(scaleUpdated, ScaleUpdated)
 RGFW_CALLBACK_DEFINE(monitor, Monitor)
-RGFW_CALLBACK_DEFINE(debug, Debug)
-#define RGFW_debugCallback(type, err, msg) if (RGFW_debugCallbackSrc) RGFW_debugCallbackSrc(type, err, msg);
 #undef RGFW_CALLBACK_DEFINE
 
 void RGFW_windowMaximizedCallback(RGFW_window* win, i32 x, i32 y, i32 w, i32 h) {
 	win->internal.flags |= RGFW_windowMaximize;
+	win->x = x;
+	win->y = y;
+	win->w = w;
+	win->h = h;
 
 	if (!(win->internal.enabledEvents & RGFW_windowMaximizedFlag)) return;
 
 	RGFW_event event;
 	event.type = RGFW_windowMaximized;
+	event.update.x = x;
+	event.update.y = y;
+	event.update.w = w;
+	event.update.h = h;
 	event.common.win = win;
 	RGFW_eventQueuePush(&event);
 
-	if (RGFW_windowMaximizedCallbackSrc) RGFW_windowMaximizedCallbackSrc(win, x, y, w, h);
+	if (RGFW_windowMaximizedCallbackSrc) RGFW_windowMaximizedCallbackSrc(&event.update);
 }
 
 void RGFW_windowMinimizedCallback(RGFW_window* win) {
@@ -3528,24 +3542,37 @@ void RGFW_windowMinimizedCallback(RGFW_window* win) {
 
 	RGFW_event event;
 	event.type = RGFW_windowMinimized;
+	event.update.x = win->x;
+	event.update.y = win->y;
+	event.update.w = win->w;
+	event.update.h = win->h;
 	event.common.win = win;
 	RGFW_eventQueuePush(&event);
 
-	if (RGFW_windowMinimizedCallbackSrc) RGFW_windowMinimizedCallbackSrc(win);
+	if (RGFW_windowMinimizedCallbackSrc) RGFW_windowMinimizedCallbackSrc(&event.update);
 }
 
 void RGFW_windowRestoredCallback(RGFW_window* win, i32 x, i32 y, i32 w, i32 h) {
 	win->internal.flags &= ~(u32)RGFW_windowMinimize;
+	win->x = x;
+	win->y = y;
+	win->w = w;
+	win->h = h;
+
 	if (RGFW_window_isMaximized(win) == RGFW_FALSE) win->internal.flags &= ~(u32)RGFW_windowMaximize;
 
 	if (!(win->internal.enabledEvents & RGFW_windowRestoredFlag)) return;
 
 	RGFW_event event;
 	event.type = RGFW_windowRestored;
+	event.update.x = x;
+	event.update.y = y;
+	event.update.w = w;
+	event.update.h = h;
 	event.common.win = win;
 	RGFW_eventQueuePush(&event);
 
-	if (RGFW_windowRestoredCallbackSrc) RGFW_windowRestoredCallbackSrc(win, x, y, w, h);
+	if (RGFW_windowRestoredCallbackSrc) RGFW_windowRestoredCallbackSrc(&event.update);
 }
 
 void RGFW_windowMovedCallback(RGFW_window* win, i32 x, i32 y) {
@@ -3555,10 +3582,16 @@ void RGFW_windowMovedCallback(RGFW_window* win, i32 x, i32 y) {
 
 	RGFW_event event;
 	event.type = RGFW_windowMoved;
+	event.update.x = x;
+	event.update.x = y;
+	event.update.w = win->w;
+	event.update.h = win->h;
+	event.common.win = win;
+
 	event.common.win = win;
 	RGFW_eventQueuePush(&event);
 
-	if (RGFW_windowMovedCallbackSrc) RGFW_windowMovedCallbackSrc(win, x, y);
+	if (RGFW_windowMovedCallbackSrc) RGFW_windowMovedCallbackSrc(&event.update);
 }
 
 void RGFW_windowResizedCallback(RGFW_window* win, i32 w, i32 h) {
@@ -3568,21 +3601,25 @@ void RGFW_windowResizedCallback(RGFW_window* win, i32 w, i32 h) {
 	if (!(win->internal.enabledEvents & RGFW_windowResizedFlag)) return;
 	RGFW_event event;
 	event.type = RGFW_windowResized;
+	event.update.x = win->x;
+	event.update.y = win->y;
+	event.update.w = w;
+	event.update.h = h;
 	event.common.win = win;
 	RGFW_eventQueuePush(&event);
 
-	if (RGFW_windowResizedCallbackSrc) RGFW_windowResizedCallbackSrc(win, w, h);
+	if (RGFW_windowResizedCallbackSrc) RGFW_windowResizedCallbackSrc(&event.update);
 }
 
-void RGFW_windowQuitCallback(RGFW_window* win) {
+void RGFW_windowCloseCallback(RGFW_window* win) {
 	win->internal.shouldClose = RGFW_TRUE;
 
 	RGFW_event event;
-	event.type = RGFW_quit;
+	event.type = RGFW_windowClose;
 	event.common.win = win;
 	RGFW_eventQueuePush(&event);
 
-	if (RGFW_windowQuitCallbackSrc) RGFW_windowQuitCallbackSrc(win);
+	if (RGFW_windowCloseCallbackSrc) RGFW_windowCloseCallbackSrc(&event.common);
 }
 
 void RGFW_mousePosCallback(RGFW_window* win, i32 x, i32 y, float vecX, float vecY) {
@@ -3599,24 +3636,29 @@ void RGFW_mousePosCallback(RGFW_window* win, i32 x, i32 y, float vecX, float vec
 	event.mouse.y = y;
 	event.mouse.vecX = vecX;
 	event.mouse.vecY = vecY;
+	event.mouse.inWindow = win->internal.mouseInside;
 	event.common.win = win;
 
 	RGFW_eventQueuePush(&event);
 
-	if (RGFW_mousePosCallbackSrc) RGFW_mousePosCallbackSrc(win, x, y, vecX, vecY);
+	if (RGFW_mousePosCallbackSrc) RGFW_mousePosCallbackSrc(&event.mouse);
 }
 
-void RGFW_windowRefreshCallback(RGFW_window* win) {
+void RGFW_windowRefreshCallback(RGFW_window* win, i32 x, i32 y, i32 w, i32 h) {
 	if (!(win->internal.enabledEvents & RGFW_windowRefreshFlag)) return;
 	RGFW_event event;
 	event.type = RGFW_windowRefresh;
+	event.update.x = x;
+	event.update.y = y;
+	event.update.w = w;
+	event.update.h = h;
 	event.common.win = win;
 	RGFW_eventQueuePush(&event);
 
-	if (RGFW_windowRefreshCallbackSrc) RGFW_windowRefreshCallbackSrc(win);
+	if (RGFW_windowRefreshCallbackSrc) RGFW_windowRefreshCallbackSrc(&event.update);
 }
 
-void RGFW_focusCallback(RGFW_window* win, RGFW_bool inFocus) {
+void RGFW_windowFocusCallback(RGFW_window* win, RGFW_bool inFocus) {
 	win->internal.inFocus = inFocus;
 
 	if (win->internal.captureMouse) {
@@ -3625,12 +3667,13 @@ void RGFW_focusCallback(RGFW_window* win, RGFW_bool inFocus) {
 
 	RGFW_event event;
 	event.common.win = win;
+	event.focus.state = inFocus;
 
 	if (inFocus == RGFW_TRUE) {
 		if ((win->internal.flags & RGFW_windowFullscreen))
 			RGFW_window_raise(win);
 
-		event.type = RGFW_focusIn;
+		event.type = RGFW_windowFocusIn;
 	} else if (inFocus == RGFW_FALSE) {
 		if ((win->internal.flags & RGFW_windowFullscreen))
 			RGFW_window_minimize(win);
@@ -3646,14 +3689,14 @@ void RGFW_focusCallback(RGFW_window* win, RGFW_bool inFocus) {
 		}
 
 		RGFW_resetKey();
-		event.type = RGFW_focusOut;
+		event.type = RGFW_windowFocusOut;
 	}
 
 	event.common.win = win;
 
 	RGFW_eventQueuePush(&event);
 
-	if (RGFW_focusCallbackSrc) RGFW_focusCallbackSrc(win, inFocus);
+	if (RGFW_windowFocusCallbackSrc) RGFW_windowFocusCallbackSrc(&event.focus);
 }
 
 void RGFW_mouseNotifyCallback(RGFW_window* win, i32 x, i32 y, RGFW_bool status) {
@@ -3667,6 +3710,7 @@ void RGFW_mouseNotifyCallback(RGFW_window* win, i32 x, i32 y, RGFW_bool status) 
 	event.common.win = win;
 	event.mouse.x = x;
 	event.mouse.y = y;
+	event.mouse.inWindow = win->internal.mouseInside;
 
 	if (status) {
 		if (!(win->internal.enabledEvents & RGFW_mouseEnterFlag)) return;
@@ -3682,7 +3726,7 @@ void RGFW_mouseNotifyCallback(RGFW_window* win, i32 x, i32 y, RGFW_bool status) 
 
 	RGFW_eventQueuePush(&event);
 
-	if (RGFW_mouseNotifyCallbackSrc) RGFW_mouseNotifyCallbackSrc(win, x, y, status);
+	if (RGFW_mouseNotifyCallbackSrc) RGFW_mouseNotifyCallbackSrc(&event.mouse);
 }
 
 void RGFW_dataDropCallback(RGFW_window* win, char** files, size_t count) {
@@ -3695,12 +3739,12 @@ void RGFW_dataDropCallback(RGFW_window* win, char** files, size_t count) {
 
 	RGFW_event event;
 	event.type = RGFW_dataDrop;
-	event.drop.files = files;
+	event.drop.value = files;
 	event.drop.count = count;
 	event.common.win = win;
 	RGFW_eventQueuePush(&event);
 
-	if (RGFW_dataDropCallbackSrc) RGFW_dataDropCallbackSrc(win, files, count);
+	if (RGFW_dataDropCallbackSrc) RGFW_dataDropCallbackSrc(&event.drop);
 }
 
 void RGFW_dataDragCallback(RGFW_window* win, i32 x, i32 y) {
@@ -3718,7 +3762,7 @@ void RGFW_dataDragCallback(RGFW_window* win, i32 x, i32 y) {
 	event.common.win = win;
 	RGFW_eventQueuePush(&event);
 
-	if (RGFW_dataDragCallbackSrc) RGFW_dataDragCallbackSrc(win, x, y);
+	if (RGFW_dataDragCallbackSrc) RGFW_dataDragCallbackSrc(&event.drag);
 }
 
 void RGFW_keyCharCallback(RGFW_window* win, u32 codepoint) {
@@ -3730,7 +3774,7 @@ void RGFW_keyCharCallback(RGFW_window* win, u32 codepoint) {
 	event.common.win = win;
 	RGFW_eventQueuePush(&event);
 
-	if (RGFW_keyCharCallbackSrc) RGFW_keyCharCallbackSrc(win, codepoint);
+	if (RGFW_keyCharCallbackSrc) RGFW_keyCharCallbackSrc(&event.keyChar);
 }
 
 void RGFW_keyCallback(RGFW_window* win, RGFW_key key, RGFW_keymod mod, RGFW_bool repeat, RGFW_bool press) {
@@ -3750,10 +3794,11 @@ void RGFW_keyCallback(RGFW_window* win, RGFW_key key, RGFW_keymod mod, RGFW_bool
 	event.key.value = key;
 	event.key.mod = repeat;
 	event.key.mod = mod;
+	event.key.state = press;
 	event.common.win = win;
 	RGFW_eventQueuePush(&event);
 
-	if (RGFW_keyCallbackSrc) RGFW_keyCallbackSrc(win, key, mod, repeat, press);
+	if (RGFW_keyCallbackSrc) RGFW_keyCallbackSrc(&event.key);
 }
 
 void RGFW_mouseButtonCallback(RGFW_window* win, RGFW_mouseButton button, RGFW_bool press) {
@@ -3770,10 +3815,11 @@ void RGFW_mouseButtonCallback(RGFW_window* win, RGFW_mouseButton button, RGFW_bo
 	_RGFW->mouseButtons[button].current = press;
 
 	event.button.value = button;
+	event.button.state = press;
 	event.common.win = win;
 	RGFW_eventQueuePush(&event);
 
-	if (RGFW_mouseButtonCallbackSrc) RGFW_mouseButtonCallbackSrc(win, button, press);
+	if (RGFW_mouseButtonCallbackSrc) RGFW_mouseButtonCallbackSrc(&event.button);
 }
 
 void RGFW_mouseScrollCallback(RGFW_window* win, float x, float y) {
@@ -3788,7 +3834,7 @@ void RGFW_mouseScrollCallback(RGFW_window* win, float x, float y) {
 	event.common.win = win;
 	RGFW_eventQueuePush(&event);
 
-	if (RGFW_mouseScrollCallbackSrc) RGFW_mouseScrollCallbackSrc(win, x, y);
+	if (RGFW_mouseScrollCallbackSrc) RGFW_mouseScrollCallbackSrc(&event.scroll);
 }
 
 void RGFW_scaleUpdatedCallback(RGFW_window* win, float scaleX, float scaleY) {
@@ -3802,7 +3848,7 @@ void RGFW_scaleUpdatedCallback(RGFW_window* win, float scaleX, float scaleY) {
 	event.common.win = win;
 	RGFW_eventQueuePush(&event);
 
-	if (RGFW_scaleUpdatedCallbackSrc) RGFW_scaleUpdatedCallbackSrc(win, scaleX, scaleY);
+	if (RGFW_scaleUpdatedCallbackSrc) RGFW_scaleUpdatedCallbackSrc(&event.scale);
 }
 
 void RGFW_monitorCallback(RGFW_window* win, const RGFW_monitor* monitor, RGFW_bool connected) {
@@ -3814,10 +3860,11 @@ void RGFW_monitorCallback(RGFW_window* win, const RGFW_monitor* monitor, RGFW_bo
 	RGFW_event event;
 	event.type = (connected) ? (RGFW_monitorConnected) : (RGFW_monitorDisconnected);
 	event.monitor.monitor = monitor;
+	event.monitor.state = connected;
 	event.common.win = win;
 	RGFW_eventQueuePush(&event);
 
-	if (RGFW_monitorCallbackSrc) RGFW_monitorCallbackSrc(win, monitor, connected);
+	if (RGFW_monitorCallbackSrc) RGFW_monitorCallbackSrc(&event.monitor);
 }
 
 #ifdef RGFW_DEBUG
@@ -3825,7 +3872,7 @@ void RGFW_monitorCallback(RGFW_window* win, const RGFW_monitor* monitor, RGFW_bo
 #endif
 
 void RGFW_sendDebugInfo(RGFW_debugType type, RGFW_errorCode err, const char* msg) {
-	RGFW_debugCallback(type, err, msg);
+//	RGFW_debugCallback(type, err, msg);
 
     #ifdef RGFW_DEBUG
 	switch (type) {
@@ -4408,7 +4455,7 @@ RGFW_bool RGFW_window_shouldClose(RGFW_window* win) {
 
 void RGFW_window_setShouldClose(RGFW_window* win, RGFW_bool shouldClose) {
 	if (shouldClose)  {
-		RGFW_windowQuitCallback(win);
+		RGFW_windowCloseCallback(win);
 	} else {
 		win->internal.shouldClose = RGFW_FALSE;
 	}
@@ -6840,7 +6887,7 @@ void RGFW_XHandleEvent(void) {
 			break;
 
 		case Expose: {
-			RGFW_windowRefreshCallback(win);
+			RGFW_windowRefreshCallback(win, 0, 0, win->w, win->h);
 
 #ifdef RGFW_ADVANCED_SMOOTH_RESIZE
 			XSyncValue value;
@@ -6872,12 +6919,12 @@ void RGFW_XHandleEvent(void) {
 			RGFW_LOAD_ATOM(WM_DELETE_WINDOW);
 			/* if the client closed the window */
 			if (E.xclient.data.l[0] == (long)WM_DELETE_WINDOW) {
-				RGFW_windowQuitCallback(win);
+				RGFW_windowCloseCallback(win);
 				break;
 			}
 #ifdef RGFW_ADVANCED_SMOOTH_RESIZE
 			if (E.xclient.message_type == WM_PROTOCOLS && (Atom)E.xclient.data.l[0] == _NET_WM_SYNC_REQUEST) {
-				RGFW_windowRefreshCallback(win);
+				RGFW_windowRefreshCallback(win, 0, 0, win->w, win->h);
 				win->src.counter_value = 0;
 				win->src.counter_value |= E.xclient.data.l[2];
 				win->src.counter_value |= (E.xclient.data.l[3] << 32);
@@ -7106,11 +7153,11 @@ void RGFW_XHandleEvent(void) {
 		}
 		case FocusIn:
             if (win->src.ic) XSetICFocus(win->src.ic);
-			RGFW_focusCallback(win, 1);
+			RGFW_windowFocusCallback(win, 1);
 			break;
 		case FocusOut:
             if (win->src.ic) XUnsetICFocus(win->src.ic);
-			RGFW_focusCallback(win, 0);
+			RGFW_windowFocusCallback(win, 0);
 			break;
 		case EnterNotify: {
 			RGFW_mouseNotifyCallback(win, E.xcrossing.x, E.xcrossing.y, RGFW_TRUE);
@@ -8769,7 +8816,7 @@ static void RGFW_wl_xdg_toplevel_close_handler(void* data, struct xdg_toplevel *
 	RGFW_window* win = (RGFW_window*)data;
 
 	if (!win->internal.shouldClose) {
-		RGFW_windowQuitCallback(win);
+		RGFW_windowCloseCallback(win);
 	}
 }
 
@@ -8946,7 +8993,7 @@ static void RGFW_wl_keyboard_enter(void* data, struct wl_keyboard *keyboard, u32
 	/* pressed this flag is not set since there is no event to listen for */
 	if (win->src.minimized == RGFW_TRUE) win->src.minimized = RGFW_FALSE;
 
-	RGFW_focusCallback(win, RGFW_TRUE);
+	RGFW_windowFocusCallback(win, RGFW_TRUE);
 }
 
 static void RGFW_wl_keyboard_leave(void* data, struct wl_keyboard *keyboard, u32 serial, struct wl_surface *surface) {
@@ -8957,7 +9004,7 @@ static void RGFW_wl_keyboard_leave(void* data, struct wl_keyboard *keyboard, u32
 	if (RGFW->kbOwner == win)
 		RGFW->kbOwner = NULL;
 
-	RGFW_focusCallback(win, RGFW_FALSE);
+	RGFW_windowFocusCallback(win, RGFW_FALSE);
 }
 
 static xkb_keysym_t RGFW_wl_composeSymbol(RGFW_info* RGFW, xkb_keysym_t sym) {
@@ -10542,11 +10589,11 @@ LRESULT CALLBACK WndProcW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
 		case WM_CLOSE:
 		case WM_QUIT:
-			RGFW_windowQuitCallback(win);
+			RGFW_windowCloseCallback(win);
 			return 0;
 		case WM_ACTIVATE: {
 			RGFW_bool inFocus = RGFW_BOOL(LOWORD(wParam) != WA_INACTIVE);
-			RGFW_focusCallback(win, inFocus);
+			RGFW_windowFocusCallback(win, inFocus);
 
 			return DefWindowProcW(hWnd, message, wParam, lParam);
 		}
@@ -10628,7 +10675,7 @@ LRESULT CALLBACK WndProcW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case WM_PAINT: {
             PAINTSTRUCT ps;
             BeginPaint(hWnd, &ps);
-            RGFW_windowRefreshCallback(win);
+            RGFW_windowRefreshCallback(win, 0, 0, win->w, win->h);
             EndPaint(hWnd, &ps);
 
             return DefWindowProcW(hWnd, message, wParam, lParam);
@@ -10659,7 +10706,7 @@ LRESULT CALLBACK WndProcW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		}
         case WM_TIMER:
-			RGFW_windowRefreshCallback(win);
+			RGFW_windowRefreshCallback(win, 0, 0, win->w, win->h);
 			break;
 
 		case WM_NCLBUTTONDOWN: {
@@ -12845,7 +12892,7 @@ static u32 RGFW_OnClose(id self) {
 	object_getInstanceVariable(self, (const char*)"RGFW_window", (void**)&win);
 	if (win == NULL) return true;
 
-	RGFW_windowQuitCallback(win);
+	RGFW_windowCloseCallback(win);
 	return false;
 }
 
@@ -13038,7 +13085,7 @@ static void RGFW__osxWindowBecameKey(id self, SEL sel) {
 	object_getInstanceVariable(self, "RGFW_window", (void**)&win);
 	if (win == NULL) return;
 
-	RGFW_focusCallback(win, RGFW_TRUE);
+	RGFW_windowFocusCallback(win, RGFW_TRUE);
 }
 
 static void RGFW__osxWindowResignKey(id self, SEL sel) {
@@ -13047,7 +13094,7 @@ static void RGFW__osxWindowResignKey(id self, SEL sel) {
 	object_getInstanceVariable(self, "RGFW_window", (void**)&win);
 	if (win == NULL) return;
 
-	RGFW_focusCallback(win, RGFW_FALSE);
+	RGFW_windowFocusCallback(win, RGFW_FALSE);
 }
 
 static void RGFW__osxDidWindowResize(id self, SEL _cmd, id notification) {
@@ -13109,7 +13156,7 @@ static void RGFW__osxUpdateLayer(id self, SEL _cmd) {
 	RGFW_window* win = NULL;
 	object_getInstanceVariable(self, "RGFW_window", (void**)&win);
 	if (win == NULL) return;
-	RGFW_windowRefreshCallback(win);
+	RGFW_windowRefreshCallback(win, 0, 0, win->w, win->h);
 }
 
 static void RGFW__osxDrawRect(id self, SEL _cmd, CGRect rect) {
@@ -13118,7 +13165,7 @@ static void RGFW__osxDrawRect(id self, SEL _cmd, CGRect rect) {
 	object_getInstanceVariable(self, "RGFW_window", (void**)&win);
 	if (win == NULL) return;
 
-	RGFW_windowRefreshCallback(win);
+	RGFW_windowRefreshCallback(win, 0, 0, win->w, win->h);
 }
 
 static void RGFW__osxMouseEntered(id self, SEL _cmd, id event) {
@@ -14751,14 +14798,14 @@ EM_BOOL Emscripten_on_fullscreenchange(int eventType, const EmscriptenFullscreen
 EM_BOOL Emscripten_on_focusin(int eventType, const EmscriptenFocusEvent* E, void* userData) {
 	RGFW_UNUSED(eventType); RGFW_UNUSED(userData); RGFW_UNUSED(E);
 
-	RGFW_focusCallback(_RGFW->root, 1);
+	RGFW_windowFocusCallback(_RGFW->root, 1);
     return EM_TRUE;
 }
 
 EM_BOOL Emscripten_on_focusout(int eventType, const EmscriptenFocusEvent* E, void* userData) {
 	RGFW_UNUSED(eventType); RGFW_UNUSED(userData); RGFW_UNUSED(E);
 
-	RGFW_focusCallback(_RGFW->root, 0);
+	RGFW_windowFocusCallback(_RGFW->root, 0);
     return EM_TRUE;
 }
 

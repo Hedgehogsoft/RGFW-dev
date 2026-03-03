@@ -13,7 +13,7 @@ int main(void) {
 
     while (RGFW_window_shouldClose(win) == RGFW_FALSE) {
         RGFW_event event;
-        while (RGFW_window_checkEvent(win, &event) && event.type != RGFW_quit);
+        while (RGFW_window_checkEvent(win, &event) && event.type != RGFW_windowClose);
     }
 
     RGFW_window_close(win);

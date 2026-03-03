@@ -33,14 +33,13 @@ int commandBuffers(vulkanContext *ctx);
 int draw_frame(vulkanContext *ctx);
 
 float mouse_data[2] = {0.0f, 0.0f};
-RGFWDEF void mousePosCallback(RGFW_window *win, i32 x, i32 y, float vecX, float vecY);
-void mousePosCallback(RGFW_window *win, i32 x, i32 y, float vecX, float vecY) {
-  RGFW_UNUSED(vecX);  RGFW_UNUSED(vecY);
-  printf("mouse moved %i %i\n", x, y);
-  float halfWidth = (float)(win->w / 2.0f);
-  float halfHeight = (float)(win->h / 2.0f);
-  mouse_data[0] = (float)(x - halfWidth) / halfWidth;
-  mouse_data[1] = (float)(y - halfHeight) / halfHeight;
+RGFWDEF void mousePosCallback(const RGFW_mousePosEvent* e);
+void mousePosCallback(const RGFW_mousePosEvent* e) {
+  printf("mouse moved %i %i\n", e->x, e->y);
+  float halfWidth = (float)(e->win->w / 2.0f);
+  float halfHeight = (float)(e->win->h / 2.0f);
+  mouse_data[0] = (float)(e->x - halfWidth) / halfWidth;
+  mouse_data[1] = (float)(e->y - halfHeight) / halfHeight;
 }
 
 int main(void) {
@@ -48,7 +47,7 @@ int main(void) {
       RGFW_createWindow("Vulkan Example", 0, 0, 500, 500,
                         RGFW_windowAllowDND | RGFW_windowCenter);
   RGFW_window_setExitKey(win, RGFW_escape);
-  RGFW_setMousePosCallback(mousePosCallback);
+  RGFW_setMousePosCallback((RGFW_genericfunc)mousePosCallback);
 
   vulkanContext ctx;
 
@@ -65,7 +64,7 @@ int main(void) {
   while (running && !RGFW_window_isKeyPressed(win, RGFW_escape)) {
     RGFW_event event;
     while (RGFW_window_checkEvent(win, &event)) {
-		if (event.type == RGFW_quit) {
+		if (event.type == RGFW_windowClose) {
 			running = 0;
 			break;
 		}

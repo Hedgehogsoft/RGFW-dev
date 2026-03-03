@@ -19,7 +19,7 @@ int main(void) {
         RGFW_waitForEvent(RGFW_eventWaitNext);
         while (RGFW_window_checkEvent(win, &event)) {
             switch (event.type) {
-                case RGFW_quit: printf("window closed\n"); break;
+                case RGFW_windowClose: printf("window closed\n"); break;
                 case RGFW_keyChar:
                     printf("Key char %c\n", event.keyChar.value);
 					break;
@@ -57,10 +57,10 @@ int main(void) {
                 case RGFW_windowRestored:
                     printf("window restored %i %i\n", win->w, win->h);
                     break;
-                case RGFW_focusIn:
+                case RGFW_windowFocusIn:
                     printf("Focused\n");
                     break;
-                case RGFW_focusOut:
+                case RGFW_windowFocusOut:
                     printf("Unfocused\n");
                     break;
                 case RGFW_mouseEnter:
@@ -75,7 +75,7 @@ int main(void) {
                 case RGFW_dataDrop: {
                     u32 i;
                     for (i = 0; i < event.drop.count; i++)
-                        printf("dropped : %s\n", event.drop.files[i]);
+                        printf("dropped : %s\n", event.drop.value[i]);
                     break;
                 }
                 case RGFW_dataDrag:

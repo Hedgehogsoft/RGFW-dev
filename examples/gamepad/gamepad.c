@@ -41,7 +41,7 @@ int main(void) {
 
         RGFW_event event;
         while (RGFW_window_checkEvent(win, &event)) {
-            if (event.type == RGFW_quit) break;
+            if (event.type == RGFW_windowClose) break;
             switch (event.type) {
                 case RGFW_keyPressed:
                     if (event.key.value == RGFW_left && gamepad && gamepad->prev) {

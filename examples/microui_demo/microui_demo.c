@@ -280,10 +280,10 @@ int main(int argc, char **argv) {
     /* handle RGFW events */
     RGFW_event event;
     while (RGFW_window_checkEvent(window, &event)) {
-      if (event.type == RGFW_quit) break;
+      if (event.type == RGFW_windowClose) break;
 
       switch (event.type) {
-        case RGFW_quit: break;
+        case RGFW_windowClose: break;
         case RGFW_mousePosChanged: mu_input_mousemove(ctx, event.mouse.x,  event.mouse.y); break;
 
 		case RGFW_mouseScroll:

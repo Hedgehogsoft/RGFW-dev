@@ -11,7 +11,7 @@ int main(void) {
 //                        printf("Maximized: %s\n", RGFW_window_isMaximized(win) ? "true" : "false");
         RGFW_event event;
         while (RGFW_window_checkEvent(win, &event)) {
-            if (event.type == RGFW_quit) break;
+            if (event.type == RGFW_windowClose) break;
             if (event.type != RGFW_keyPressed) continue;
             switch (event.key.value) {
                     case RGFW_b:
