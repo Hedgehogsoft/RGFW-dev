@@ -8689,6 +8689,7 @@ static void RGFW_wl_relative_pointer_motion(void *data, struct zwp_relative_poin
 	float vecX =  (float)wl_fixed_to_double(dx);
 	float vecY = (float)wl_fixed_to_double(dy);
 	RGFW_rawMotionCallback(win, vecX, vecY);
+	RGFW_mousePosCallback(win, win->internal.lastMouseX, win->internal.lastMouseY);
 }
 
 static void RGFW_wl_pointer_locked(void *data, struct zwp_locked_pointer_v1 *zwp_locked_pointer_v1) {
