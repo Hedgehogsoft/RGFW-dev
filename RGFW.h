@@ -74,9 +74,9 @@
 /*
 Example to get you started :
 
-linux : gcc main.c -lX11 -lXrandr -lGL
-windows : gcc main.c -lopengl32 -lgdi32
-macos : gcc main.c -framework Cocoa -framework CoreVideo -framework OpenGL -framework IOKit
+linux : gcc main.c -lX11 -lXrandr -lm
+windows : gcc main.c -lgdi32
+macos : gcc main.c -framework Cocoa -framework CoreVideo -framework IOKit
 
 #define RGFW_IMPLEMENTATION
 #include "RGFW.h"
