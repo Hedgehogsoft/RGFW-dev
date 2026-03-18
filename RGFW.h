@@ -82,10 +82,7 @@ macos : gcc main.c -framework Cocoa -framework CoreVideo -framework IOKit
 #include "RGFW.h"
 
 int main() {
-	RGFW_window* win = RGFW_createWindow("name", 100, 100, 500, 500, (u64)0);
-	RGFW_event event;
-
-	RGFW_window_setExitKey(win, RGFW_keyEscape);
+	RGFW_window* win = RGFW_createWindow("name", 100, 100, 500, 500, 0);
 
 	while (RGFW_window_shouldClose(win) == RGFW_FALSE) {
 		RGFW_pollEvents();
@@ -10412,6 +10409,7 @@ void RGFW_win32_makeWindowTransparent(RGFW_window* win) {
 RGFWDEF RGFW_bool RGFW_win32_getDarkModeState(void);
 RGFW_bool RGFW_win32_getDarkModeState(void) {
 	u32 lightMode = 1;
+#if (_WIN32_WINNT >= 0x0600)
 	DWORD len = sizeof(lightMode);
 
 	RegGetValueW(
@@ -10419,6 +10417,7 @@ RGFW_bool RGFW_win32_getDarkModeState(void) {
 		L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
 		L"AppsUseLightTheme", RRF_RT_REG_DWORD, NULL, &lightMode, &len
 	);
+#endif
 
 	return (lightMode == 0);
 }
