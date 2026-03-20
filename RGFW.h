@@ -8875,7 +8875,7 @@ static void RGFW_wl_keyboard_key(void* data, struct wl_keyboard *keyboard, u32 s
 	RGFW_key RGFWkey = RGFW_apiKeyToRGFW(key + 8);
 
 	RGFW_keyUpdateKeyMods(RGFW_key_win, RGFW_BOOL(xkb_keymap_mod_get_index(RGFW->keymap, "Lock")), RGFW_BOOL(xkb_keymap_mod_get_index(RGFW->keymap, "Mod2")), RGFW_BOOL(xkb_keymap_mod_get_index(RGFW->keymap, "ScrollLock")));
-	RGFW_keyCallback(RGFW_key_win, (u8)RGFWkey, RGFW_key_win->internal.mod, RGFW_isKeyDown(RGFW_key_win, (u8)RGFWkey) && RGFW_BOOL(state), RGFW_BOOL(state));
+	RGFW_keyCallback(RGFW_key_win, (u8)RGFWkey, RGFW_key_win->internal.mod, RGFW_isKeyDown((u8)RGFWkey) && RGFW_BOOL(state), RGFW_BOOL(state));
 
 	/* [comment by Kala Telo (@kala-telo) and edited by Riley Mabb (@ColleagueRiley)]
 		we send the event at the moment we receive it, and
@@ -14769,7 +14769,7 @@ void EMSCRIPTEN_KEEPALIVE RGFW_handleKeyEvent(char* code, u32 codepoint, RGFW_bo
 
 	u32 physicalKey = RGFW_WASMPhysicalToRGFW(hash);
 
-	RGFW_keyCallback(_RGFW->root, physicalKey, _RGFW->root->internal.mod,  RGFW_isKeyDown(_RGFW->root, (u8)physicalKey) && press, press);
+	RGFW_keyCallback(_RGFW->root, physicalKey, _RGFW->root->internal.mod,  RGFW_isKeyDown((u8)physicalKey) && press, press);
 	if (press) {
 ;		RGFW_keyCharCallback(_RGFW->root, codepoint);
 	}
