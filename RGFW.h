@@ -10468,7 +10468,6 @@ LRESULT CALLBACK WndProcW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				RGFW_window_captureMousePlatform(win, RGFW_TRUE);
 			}
 
-printf("b %i %i\n",LOWORD(lParam), HIWORD(lParam));
 			RGFW_windowResizedCallback(win, LOWORD(lParam), HIWORD(lParam));
 			RGFW_window_checkMode(win);
 			return DefWindowProcW(hWnd, message, wParam, lParam);
