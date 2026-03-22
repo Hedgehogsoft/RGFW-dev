@@ -2991,6 +2991,7 @@ typedef struct RGFW_windowInternal {
 	RGFW_eventFlag enabledEvents;
 	u32 flags; /*!< windows flags (for RGFW to check and modify) */
 	i32 oldX, oldY, oldW, oldH;
+	RGFW_monitorMode oldMode;
 } RGFW_windowInternal;
 
 struct RGFW_window {
@@ -3635,7 +3636,7 @@ void RGFW_keyCallback(RGFW_window* win, RGFW_key key, RGFW_keymod mod, RGFW_bool
 	_RGFW->keyboard[key].current = press;
 
 	event.key.value = key;
-	event.key.mod = repeat;
+	event.key.repeat = repeat;
 	event.key.mod = mod;
 	event.key.state = press;
 	event.common.win = win;
@@ -3676,7 +3677,6 @@ void RGFW_mouseScrollCallback(RGFW_window* win, float x, float y) {
 }
 
 void RGFW_scaleUpdatedCallback(RGFW_window* win, float scaleX, float scaleY) {
-	if (win->internal.flags & RGFW_windowScaleToMonitor) RGFW_window_scaleToMonitor(win);
 	if (!(win->internal.enabledEvents & RGFW_scaleUpdatedFlag)) return;
 
 	RGFW_event event;
@@ -3875,7 +3875,12 @@ RGFW_window* RGFW_createWindowPtr(const char* name, i32 x, i32 y, i32 w, i32 h, 
 	win->internal.flags = flags;
 	win->internal.enabledEvents = RGFW_allEventFlags;
 
+	RGFW_windowFlags reservedFlags = flags & (RGFW_windowScaleToMonitor);
+	flags &= ~reservedFlags;
+
 	RGFW_window* ret = RGFW_createWindowPlatform(name, flags, win);
+
+	flags |= reservedFlags;
 
 #ifndef RGFW_X11
 	RGFW_window_setFlagsInternal(win, flags, 0);
@@ -4155,7 +4160,6 @@ RGFW_bool RGFW_loadEGL(void) { return RGFW_FALSE; }
 void RGFW_window_setFlagsInternal(RGFW_window* win, RGFW_windowFlags flags, RGFW_windowFlags cmpFlags) {
 	if (flags & RGFW_windowNoBorder)            RGFW_window_setBorder(win, 0);
 	else if (cmpFlags & RGFW_windowNoBorder)    RGFW_window_setBorder(win, 1);
-	if (flags & RGFW_windowScaleToMonitor)      RGFW_window_scaleToMonitor(win);
 	if (flags & RGFW_windowMaximize)            RGFW_window_maximize(win);
 	else if (cmpFlags & RGFW_windowMaximize)    RGFW_window_restore(win);
 	if (flags & RGFW_windowMinimize)            RGFW_window_minimize(win);
@@ -4175,6 +4179,7 @@ void RGFW_window_setFlagsInternal(RGFW_window* win, RGFW_windowFlags flags, RGFW
 	if (flags & RGFW_windowCaptureMouse)			RGFW_window_captureRawMouse(win, RGFW_TRUE);
 	else if (cmpFlags & RGFW_windowCaptureMouse)	RGFW_window_captureMouse(win, RGFW_FALSE);
 	if (flags & RGFW_windowFocus)               RGFW_window_focus(win);
+	if (flags & RGFW_windowScaleToMonitor)      RGFW_window_scaleToMonitor(win);
 
 	if (flags & RGFW_windowNoResize) {
 	    RGFW_window_setMaxSize(win, win->w, win->h);
@@ -4253,7 +4258,7 @@ void RGFW_window_center(RGFW_window* win) {
 	RGFW_monitor* mon = RGFW_window_getMonitor(win);
 	if (mon == NULL) return;
 
-	RGFW_window_move(win, (i32)(mon->mode.w - win->w) / 2, (mon->mode.h - win->h) / 2);
+	RGFW_window_move(win, mon->x + ((i32)(mon->mode.w - win->w) / 2), mon->y + ((mon->mode.h - win->h) / 2));
 }
 
 RGFW_bool RGFW_monitor_scaleToWindow(RGFW_monitor* mon, RGFW_window* win) {
@@ -4263,7 +4268,6 @@ RGFW_bool RGFW_monitor_scaleToWindow(RGFW_monitor* mon, RGFW_window* win) {
 	mode.w = win->w;
 	mode.h = win->h;
 	RGFW_bool ret = RGFW_monitor_requestMode(mon, &mode, RGFW_monitorScale);
-
 
 	/* move window to monitor origin so it doesn't move to the next monitor */
 	RGFW_window_move(win, mon->x, mon->y);
@@ -4290,7 +4294,7 @@ RGFW_bool RGFW_monitorModeCompare(RGFW_monitorMode* mon, RGFW_monitorMode* mon2,
 }
 
 RGFW_bool RGFW_window_shouldClose(RGFW_window* win) {
-	return (win == NULL || win->internal.shouldClose || (win->internal.exitKey && RGFW_window_isKeyDown(win, win->internal.exitKey)));
+	return (win == NULL || win->internal.shouldClose || (win->internal.exitKey && RGFW_isKeyDown(win->internal.exitKey)));
 }
 
 void RGFW_window_setShouldClose(RGFW_window* win, RGFW_bool shouldClose) {
@@ -4661,10 +4665,10 @@ void RGFW_keyUpdateKeyModsEx(RGFW_window* win, RGFW_bool capital, RGFW_bool numl
 
 void RGFW_keyUpdateKeyMods(RGFW_window* win, RGFW_bool capital, RGFW_bool numlock, RGFW_bool scroll) {
 	RGFW_keyUpdateKeyModsEx(win, capital, numlock,
-					RGFW_window_isKeyDown(win, RGFW_keyControlL) || RGFW_window_isKeyDown(win, RGFW_keyControlR),
-					RGFW_window_isKeyDown(win, RGFW_keyAltL) || RGFW_window_isKeyDown(win, RGFW_keyAltR),
-					RGFW_window_isKeyDown(win, RGFW_keyShiftL) || RGFW_window_isKeyDown(win, RGFW_keyShiftR),
-					RGFW_window_isKeyDown(win, RGFW_keySuperL) || RGFW_window_isKeyDown(win, RGFW_keySuperR),
+					RGFW_isKeyDown(RGFW_keyControlL) || RGFW_isKeyDown(RGFW_keyControlR),
+					RGFW_isKeyDown(RGFW_keyAltL) || RGFW_isKeyDown(RGFW_keyAltR),
+					RGFW_isKeyDown(RGFW_keyShiftL) || RGFW_isKeyDown(RGFW_keyShiftR),
+					RGFW_isKeyDown(RGFW_keySuperL) || RGFW_isKeyDown(RGFW_keySuperR),
 					scroll);
 }
 
@@ -6670,7 +6674,7 @@ void RGFW_XHandleEvent(void) {
 			XkbGetState(_RGFW->display, XkbUseCoreKbd, &state);
 			RGFW_keyUpdateKeyMods(win, (state.locked_mods & LockMask), (state.locked_mods & Mod2Mask), (state.locked_mods & Mod3Mask));
 
-			RGFW_keyCallback(win, value, win->internal.mod, keyRepeat, RGFW_FALSE);
+			RGFW_keyCallback(win, value, win->internal.mod, RGFW_FALSE, RGFW_FALSE);
 			break;
 		}
 		case ButtonPress: {
@@ -8891,7 +8895,7 @@ static void RGFW_wl_keyboard_key(void* data, struct wl_keyboard *keyboard, u32 s
 	RGFW_key RGFWkey = RGFW_apiKeyToRGFW(key + 8);
 
 	RGFW_keyUpdateKeyMods(RGFW_key_win, RGFW_BOOL(xkb_keymap_mod_get_index(RGFW->keymap, "Lock")), RGFW_BOOL(xkb_keymap_mod_get_index(RGFW->keymap, "Mod2")), RGFW_BOOL(xkb_keymap_mod_get_index(RGFW->keymap, "ScrollLock")));
-	RGFW_keyCallback(RGFW_key_win, (u8)RGFWkey, RGFW_key_win->internal.mod, RGFW_window_isKeyDown(RGFW_key_win, (u8)RGFWkey), RGFW_BOOL(state));
+	RGFW_keyCallback(RGFW_key_win, (u8)RGFWkey, RGFW_key_win->internal.mod, RGFW_isKeyDown((u8)RGFWkey) && RGFW_BOOL(state), RGFW_BOOL(state));
 
 	/* [comment by Kala Telo (@kala-telo) and edited by Riley Mabb (@ColleagueRiley)]
 		we send the event at the moment we receive it, and
@@ -9132,9 +9136,6 @@ static void RGFW_wl_surface_enter(void *data, struct wl_surface *wl_surface, str
 	if (node == NULL) return;
 
 	win->src.active_monitor = node;
-
-	if (win->internal.flags & RGFW_windowScaleToMonitor)
-		RGFW_window_scaleToMonitor(win);
 }
 
 static void RGFW_wl_data_source_send(void *data, struct wl_data_source *wl_data_source, const char *mime_type, i32 fd) {
@@ -10662,10 +10663,8 @@ LRESULT CALLBACK WndProcW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				else value = RGFW_keyControlL;
 			}
 
-			RGFW_bool repeat = ((lParam & 0x40000000) != 0) || RGFW_window_isKeyDown(win, value);
-
 			RGFW_keyUpdateKeyMods(win, (GetKeyState(VK_CAPITAL) & 0x0001), (GetKeyState(VK_NUMLOCK) & 0x0001), (GetKeyState(VK_SCROLL) & 0x0001));
-			RGFW_keyCallback(win, value, win->internal.mod, repeat, RGFW_FALSE);
+			RGFW_keyCallback(win, value, win->internal.mod, RGFW_FALSE, RGFW_FALSE);
 			break;
 		}
 		case WM_SYSKEYDOWN: case WM_KEYDOWN: {
@@ -10688,7 +10687,7 @@ LRESULT CALLBACK WndProcW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				else value = RGFW_keyControlL;
 			}
 
-			RGFW_bool repeat = ((lParam & 0x40000000) != 0) || RGFW_window_isKeyDown(win, value);
+			RGFW_bool repeat = RGFW_isKeyDown(value);
 
 			RGFW_keyUpdateKeyMods(win, (GetKeyState(VK_CAPITAL) & 0x0001), (GetKeyState(VK_NUMLOCK) & 0x0001), (GetKeyState(VK_SCROLL) & 0x0001));
 			RGFW_keyCallback(win, value, win->internal.mod, repeat, 1);
@@ -11134,8 +11133,6 @@ RGFW_window* RGFW_createWindowPlatform(const char* name, RGFW_windowFlags flags,
 
 	DWORD window_style = WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 
-	RECT windowRect, clientRect;
-
 	if (!(flags & RGFW_windowNoBorder)) {
 		window_style |= WS_CAPTION | WS_SYSMENU | WS_BORDER | WS_MINIMIZEBOX;
 
@@ -11147,9 +11144,6 @@ RGFW_window* RGFW_createWindowPlatform(const char* name, RGFW_windowFlags flags,
 	wchar_t wide_name[256];
 	MultiByteToWideChar(CP_UTF8, 0, name, -1, wide_name, 255);
 	HWND dummyWin = CreateWindowW(Class.lpszClassName, (wchar_t*)wide_name, window_style, win->x, win->y, win->w, win->h, 0, 0, inh, 0);
-
-	GetWindowRect(dummyWin, &windowRect);
-	GetClientRect(dummyWin, &clientRect);
 
 #ifdef RGFW_OPENGL
 	RGFW_win32_loadOpenGLFuncs(dummyWin);
@@ -11179,23 +11173,29 @@ RGFW_window* RGFW_createWindowPlatform(const char* name, RGFW_windowFlags flags,
 
 void RGFW_window_setBorder(RGFW_window* win, RGFW_bool border) {
 	RGFW_setBit(&win->internal.flags, RGFW_windowNoBorder, !border);
+
+	RECT rect;
+    GetClientRect(win->src.window, &rect);
+
 	LONG style = GetWindowLong(win->src.window, GWL_STYLE);
+	style |= (LONG)RGFW_winapi_window_getStyle(win, win->internal.flags);
 
 	if (border == 0) {
-		SetWindowLong(win->src.window, GWL_STYLE, style & ~WS_OVERLAPPEDWINDOW);
-		SetWindowPos(
-			win->src.window, HWND_TOP, 0, 0, 0, 0,
-			SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOMOVE | SWP_NOSIZE
-		);
-	}
-	else {
+		style &= ~WS_OVERLAPPEDWINDOW;
+	} else {
 		if (win->internal.flags & RGFW_windowNoResize) style &= ~WS_MAXIMIZEBOX;
-		SetWindowLong(win->src.window, GWL_STYLE, style | WS_OVERLAPPEDWINDOW);
-		SetWindowPos(
-			win->src.window, HWND_TOP, 0, 0, 0, 0,
-			SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOMOVE | SWP_NOSIZE
-		);
+		style |= WS_OVERLAPPEDWINDOW;
 	}
+
+	DWORD exStyle = RGFW_winapi_window_getExStyle(win, win->internal.flags);
+	ClientToScreen(win->src.window, (POINT*) &rect.left);
+    ClientToScreen(win->src.window, (POINT*) &rect.right);
+
+	AdjustWindowRectEx(&rect, (DWORD)style, FALSE, exStyle);
+	SetWindowLong(win->src.window, GWL_STYLE, style);
+
+    SetWindowLongW(win->src.window, GWL_STYLE, style);
+    SetWindowPos(win->src.window, HWND_TOP, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOZORDER);
 }
 
 void RGFW_window_setDND(RGFW_window* win, RGFW_bool allow) {
@@ -11244,15 +11244,18 @@ void RGFW_window_raise(RGFW_window* win) {
 void RGFW_window_setFullscreen(RGFW_window* win, RGFW_bool fullscreen) {
 	RGFW_ASSERT(win != NULL);
 
+	RGFW_monitor* mon  = RGFW_window_getMonitor(win);
+
 	if (fullscreen == RGFW_FALSE) {
+		RGFW_monitor_setMode(mon, &win->internal.oldMode);
+
 		RGFW_window_setBorder(win, 1);
 
 		RECT rect = { 0, 0, win->internal.oldW, win->internal.oldH};
 		DWORD style = RGFW_winapi_window_getStyle(win, win->internal.flags);
 		DWORD exStyle = RGFW_winapi_window_getExStyle(win, win->internal.flags);
 		AdjustWindowRectEx(&rect, style, FALSE, exStyle);
-		SetWindowPos(win->src.window, HWND_TOP, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOMOVE | SWP_NOZORDER);
-
+		SetWindowPos(win->src.window, HWND_TOP, win->internal.oldX, win->internal.oldY, rect.right - rect.left, rect.bottom - rect.top, SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOZORDER);
 
 		win->internal.flags &= ~(u32)RGFW_windowFullscreen;
 		win->x  = win->internal.oldX;
@@ -11266,17 +11269,17 @@ void RGFW_window_setFullscreen(RGFW_window* win, RGFW_bool fullscreen) {
 	win->internal.oldY = win->y;
 	win->internal.oldW = win->w;
 	win->internal.oldH = win->h;
+	win->internal.oldMode = mon->mode;
 	win->internal.flags |= RGFW_windowFullscreen;
 
-	RGFW_monitor* mon  = RGFW_window_getMonitor(win);
-
 	RGFW_window_setBorder(win, 0);
-	RGFW_monitor_scaleToWindow(mon, win);
 
-    SetWindowPos(win->src.window, HWND_TOPMOST, (i32)mon->x, (i32)mon->y, (i32)mon->mode.w, (i32)mon->mode.h, SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
-
+    SetWindowPos(win->src.window, HWND_TOPMOST, (i32)mon->x, (i32)mon->y, 0, 0, SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOSIZE);
 	win->x = mon->x;
 	win->y = mon->y;
+
+	RGFW_monitor_scaleToWindow(mon, win);
+    SetWindowPos(win->src.window, HWND_TOPMOST, 0, 0, (i32)mon->mode.w, (i32)mon->mode.h, SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOMOVE);
 	win->w = mon->mode.w;
 	win->h = mon->mode.h;
 }
@@ -11550,6 +11553,10 @@ size_t RGFW_monitor_getModesPtr(RGFW_monitor* monitor, RGFW_monitorMode** modes)
 		if (!EnumDisplaySettingsW(monitor->node->adapterName, modeIndex, &dm))
 			break;
 
+		if (ChangeDisplaySettingsExW(monitor->node->adapterName, &dm, NULL, CDS_TEST, NULL) != DISP_CHANGE_SUCCESSFUL) {
+			continue;
+		}
+
 		modeIndex++;
 
 		if (dm.dmBitsPerPel < 15)
@@ -11745,14 +11752,16 @@ RGFW_bool RGFW_monitor_setMode(RGFW_monitor* mon, RGFW_monitorMode* mode) {
 	dm.dmBitsPerPel = (DWORD)(mode->red + mode->green + mode->blue);
 
 	if (ChangeDisplaySettingsExW(mon->node->adapterName, &dm, NULL, CDS_TEST, NULL) == DISP_CHANGE_SUCCESSFUL) {
-		if (ChangeDisplaySettingsExW(mon->node->adapterName, &dm, NULL, CDS_UPDATEREGISTRY, NULL) == DISP_CHANGE_SUCCESSFUL)
+		if (ChangeDisplaySettingsExW(mon->node->adapterName, &dm, NULL, CDS_UPDATEREGISTRY, NULL) == DISP_CHANGE_SUCCESSFUL) {
+			RGFW_win32_getMode(&dm, &mon->mode);
 			return RGFW_TRUE;
+		}
 		return RGFW_FALSE;
 	} else return RGFW_FALSE;
 }
 
 RGFW_bool RGFW_monitor_requestMode(RGFW_monitor* mon, RGFW_monitorMode* mode, RGFW_modeRequest request) {
-    HMONITOR src = mon->node->hMonitor;
+HMONITOR src = mon->node->hMonitor;
 
 	MONITORINFOEX  monitorInfo;
 	monitorInfo.cbSize = sizeof(MONITORINFOEX);
@@ -11762,7 +11771,15 @@ RGFW_bool RGFW_monitor_requestMode(RGFW_monitor* mon, RGFW_monitorMode* mode, RG
 	ZeroMemory(&dm, sizeof(dm));
 	dm.dmSize = sizeof(dm);
 
-	if (EnumDisplaySettingsW(mon->node->adapterName, ENUM_CURRENT_SETTINGS, &dm)) {
+	DWORD index = 0;
+
+	for (;;) {
+		if (EnumDisplaySettingsW(mon->node->adapterName, index, &dm) == 0) {
+			break;
+		}
+
+		index += 1;
+
 		if (request & RGFW_monitorScale) {
 			dm.dmFields |= DM_PELSWIDTH | DM_PELSHEIGHT;
 			dm.dmPelsWidth = (u32)mode->w;
@@ -11785,7 +11802,7 @@ RGFW_bool RGFW_monitor_requestMode(RGFW_monitor* mon, RGFW_monitorMode* mode, RG
 				return RGFW_TRUE;
 			}
 			return RGFW_FALSE;
-		} else return RGFW_FALSE;
+		}
 	}
 
 	return RGFW_FALSE;
@@ -11963,12 +11980,10 @@ void RGFW_window_resize(RGFW_window* win, i32 w, i32 h) {
 
 	win->w = w;
 	win->h = h;
-
 	RECT rect = { 0, 0, w, h};
 	DWORD style = RGFW_winapi_window_getStyle(win, win->internal.flags);
 	DWORD exStyle = RGFW_winapi_window_getExStyle(win, win->internal.flags);
 	AdjustWindowRectEx(&rect, style, FALSE, exStyle);
-
 	SetWindowPos(win->src.window, HWND_TOP, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOMOVE | SWP_NOZORDER);
 }
 
@@ -13087,7 +13102,7 @@ static void RGFW__osxKeyDown(id self, SEL _cmd, id event) {
     u32 key = (u16)((u32(*)(id, SEL))objc_msgSend)(event, sel_registerName("keyCode"));
 
 	RGFW_key value = (u8)RGFW_apiKeyToRGFW(key);
-	RGFW_bool repeat = RGFW_window_isKeyPressed(win, value);
+	RGFW_bool repeat = RGFW_isKeyDown(value);
 
     RGFW_keyCallback(win, value, win->internal.mod, repeat, 1);
 
@@ -13109,9 +13124,8 @@ static void RGFW__osxKeyUp(id self, SEL _cmd, id event) {
     u32 key = (u16)((u32(*)(id, SEL))objc_msgSend)(event, sel_registerName("keyCode"));
 
     RGFW_key value = (u8)RGFW_apiKeyToRGFW(key);
-    RGFW_bool repeat = RGFW_window_isKeyDown(win, (u8)value);
 
-    RGFW_keyCallback(win, value, win->internal.mod, repeat, 0);
+    RGFW_keyCallback(win, value, win->internal.mod, RGFW_FALSE, 0);
 }
 
 static void RGFW__osxFlagsChanged(id self, SEL _cmd, id event) {
@@ -13138,23 +13152,22 @@ static void RGFW__osxFlagsChanged(id self, SEL _cmd, id event) {
     for (i = 0; i < 5; i++) {
         u32 shift = (1 << (i + 16));
         RGFW_key key = i + RGFW_keyCapsLock;
-        if ((flags & shift) && !RGFW_window_isKeyDown(win, (u8)key)) {
+        if ((flags & shift) && !RGFW_isKeyDown((u8)key)) {
 			pressed = RGFW_TRUE;
             value = (u8)key;
             break;
         }
-        if (!(flags & shift) && RGFW_window_isKeyDown(win, (u8)key)) {
+        if (!(flags & shift) && RGFW_isKeyDown((u8)key)) {
 			pressed = RGFW_FALSE;
             value = (u8)key;
             break;
         }
     }
 
-	RGFW_bool repeat = RGFW_window_isKeyDown(win, (u8)value);
-	RGFW_keyCallback(win, value, win->internal.mod, repeat, pressed);
+	RGFW_keyCallback(win, value, win->internal.mod, RGFW_isKeyDown(value) && pressed, pressed);
 
 	if (value != RGFW_keyCapsLock) {
-		RGFW_keyCallback(win, value + 4, win->internal.mod, repeat, pressed);
+		RGFW_keyCallback(win, value + 4, win->internal.mod, RGFW_isKeyDown(value + 4) && pressed, pressed);
 	}
 
 }
@@ -14802,7 +14815,7 @@ void EMSCRIPTEN_KEEPALIVE RGFW_handleKeyEvent(char* code, u32 codepoint, RGFW_bo
 
 	u32 physicalKey = RGFW_WASMPhysicalToRGFW(hash);
 
-	RGFW_keyCallback(_RGFW->root, physicalKey, _RGFW->root->internal.mod,  RGFW_window_isKeyDown(_RGFW->root, (u8)physicalKey), press);
+	RGFW_keyCallback(_RGFW->root, physicalKey, _RGFW->root->internal.mod,  RGFW_isKeyDown((u8)physicalKey) && press, press);
 	if (press) {
 ;		RGFW_keyCharCallback(_RGFW->root, codepoint);
 	}
