@@ -1871,6 +1871,15 @@ RGFWDEF void RGFW_window_close(RGFW_window* win);
 RGFWDEF void RGFW_window_closePtr(RGFW_window* win);
 
 /**!
+ * @brief fetches the size of the window through the OS (and updates the internal values)
+ * @param win a pointer to the window
+ * @param w [OUTPUT] the width of the window
+ * @param h [OUTPUT] the height of the window
+ * @return a bool if the function was successful
+*/
+RGFWDEF RGFW_bool RGFW_window_fetchSize(RGFW_window* win, i32* w, i32* h);
+
+/**!
  * @brief moves the window to a new position on the screen
  * @param win a pointer to the target window
  * @param x the new x position
@@ -7037,6 +7046,16 @@ void RGFW_XHandleEvent(void) {
 	XFlush(_RGFW->display);
 }
 
+RGFW_bool RGFW_FUNC(RGFW_window_fetchSize) (RGFW_window* win, i32* w, i32* h) {
+    XWindowAttributes attribs;
+    XGetWindowAttributes(_RGFW->display, win->src.window, &attribs);
+
+    win->w = attribs.width;
+    win->h = attribs.height;
+
+	return RGFW_window_getSize(win, w, h);
+}
+
 void RGFW_FUNC(RGFW_pollEvents) (void) {
 	RGFW_resetPrevState();
 
@@ -7159,6 +7178,7 @@ void RGFW_FUNC(RGFW_window_maximize) (RGFW_window* win) {
 	win->internal.oldH = win->h;
 
     RGFW_toggleXMaximized(win, 1);
+	RGFW_window_fetchSize(win, NULL, NULL);
     return;
 }
 
@@ -9742,6 +9762,10 @@ RGFW_key RGFW_FUNC(RGFW_physicalToMappedKey)(RGFW_key key) {
     return RGFW_keyNULL;
 }
 
+RGFW_bool RGFW_FUNC(RGFW_window_fetchSize) (RGFW_window* win, i32* w, i32* h) {
+	return RGFW_window_getSize(win, w, h);
+}
+
 void RGFW_FUNC(RGFW_pollEvents) (void) {
 	RGFW_resetPrevState();
 
@@ -9826,6 +9850,7 @@ void RGFW_FUNC(RGFW_window_maximize) (RGFW_window* win) {
 	win->internal.oldW = win->w;
 	win->internal.oldH = win->h;
     RGFW_toggleWaylandMaximized(win, 1);
+	RGFW_window_fetchSize(win, NULL, NULL);
     return;
 }
 
@@ -11260,6 +11285,7 @@ void RGFW_window_maximize(RGFW_window* win) {
 	RGFW_ASSERT(win != NULL);
 	RGFW_window_hide(win);
 	ShowWindow(win->src.window, SW_MAXIMIZE);
+	RGFW_window_fetchSize(win, NULL, NULL);
 }
 
 void RGFW_window_minimize(RGFW_window* win) {
@@ -11377,6 +11403,16 @@ RGFW_key RGFW_physicalToMappedKey(RGFW_key key) {
     }
 
     return RGFW_keyNULL;
+}
+
+RGFW_bool RGFW_FUNC(RGFW_window_fetchSize) (RGFW_window* win, i32* w, i32* h) {
+    RECT area;
+    GetClientRect(win->src.window, &area);
+
+    win->w = area.right;
+    win->h = area.bottom;
+
+	return RGFW_window_getSize(win, w, h);
 }
 
 void RGFW_pollEvents(void) {
@@ -13636,6 +13672,15 @@ RGFW_key RGFW_physicalToMappedKey(RGFW_key key) {
 	return key;
 }
 
+RGFW_bool RGFW_FUNC(RGFW_window_fetchSize) (RGFW_window* win, i32* w, i32* h) {
+	NSRect content = ((NSRect(*)(id, SEL))abi_objc_msgSend_stret)((id)win->src.view, sel_registerName("frame"));
+
+	win->w = (i32)content.size.width;
+	win->h = (i32)content.size.height;
+
+	return RGFW_window_getSize(win, w, h);
+}
+
 void RGFW_pollEvents(void) {
 	RGFW_resetPrevState();
 
@@ -13749,6 +13794,7 @@ void RGFW_window_maximize(RGFW_window* win) {
 
 	win->internal.flags |= RGFW_windowMaximize;
 	objc_msgSend_void_SEL(win->src.window, sel_registerName("zoom:"), NULL);
+	RGFW_window_fetchSize(win, NULL, NULL);
 }
 
 void RGFW_window_minimize(RGFW_window* win) {
@@ -15037,6 +15083,10 @@ RGFW_key RGFW_physicalToMappedKey(RGFW_key key) {
 	return key;
 }
 
+RGFW_bool RGFW_FUNC(RGFW_window_fetchSize) (RGFW_window* win, i32* w, i32* h) {
+	return RGFW_window_getSize(win, w, h);
+}
+
 void RGFW_pollEvents(void) {
 	RGFW_resetPrevState();
 	emscripten_sleep(0);
@@ -15255,6 +15305,7 @@ void RGFW_window_maximize(RGFW_window* win) {
 	}
 
 	RGFW_window_move(win, 0, 0);
+	RGFW_window_fetchSize(win, NULL, NULL);
 }
 
 void RGFW_window_setFullscreen(RGFW_window* win, RGFW_bool fullscreen) {
