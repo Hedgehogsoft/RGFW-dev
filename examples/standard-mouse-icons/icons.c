@@ -7,14 +7,27 @@ int main(void) {
     RGFW_window_setExitKey(win, RGFW_keyEscape);
     RGFW_mouseIcons mouse = 0;
 
+
+	RGFW_mouse* icons[RGFW_mouseIconCount];
+
+	for (RGFW_mouseIcons i = 0; i < RGFW_mouseIconCount; i++) {
+        icons[i] = RGFW_createMouseStandard(i);
+	}
+
     while (RGFW_window_shouldClose(win) == RGFW_FALSE) {
         RGFW_pollEvents();
         if (RGFW_isMousePressed(RGFW_mouseLeft)) {
-            RGFW_window_setMouseStandard(win, mouse);
             if (mouse < RGFW_mouseIconCount) mouse++;
             else mouse = 0;
+
+			RGFW_window_setMouse(win, icons[mouse]);
         }
     }
+
+
+	for (size_t i = 0; i < RGFW_mouseIconCount; i++) {
+		RGFW_freeMouse(icons[i]);
+	}
 
     RGFW_window_close(win);
     return 0;
