@@ -9504,10 +9504,9 @@ void RGFW_FUNC(RGFW_window_blitSurface) (RGFW_window* win, RGFW_surface* surface
 void RGFW_FUNC(RGFW_surface_freePtr) (RGFW_surface* surface) {
 	RGFW_ASSERT(surface != NULL);
 
-	wl_shm_pool_destroy(surface->native.pool);
-	close(surface->native.fd);
-
-	munmap(surface->native.buffer, (size_t)(surface->w * surface->h * 4));
+	if (surface->native.pool) wl_shm_pool_destroy(surface->native.pool);
+	if (surface->native.fd) close(surface->native.fd);
+	if (surface->native.buffer) munmap(surface->native.buffer, (size_t)(surface->w * surface->h * 4));
 }
 
 void RGFW_FUNC(RGFW_window_setBorder) (RGFW_window* win, RGFW_bool border) {
@@ -9994,6 +9993,7 @@ RGFW_mouse* RGFW_FUNC(RGFW_createMouseStandard) (RGFW_mouseIcons mouse) {
 	struct wl_buffer* cursor_buffer = wl_cursor_image_get_buffer(cursor_image);
 
 	RGFW_surface* surface = RGFW_ALLOC(sizeof(RGFW_surface));
+	RGFW_MEMSET(surface, 0, sizeof(RGFW_surface));
 	surface->native.wl_buffer = cursor_buffer;
 
 	return (RGFW_mouse*)surface;
