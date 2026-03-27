@@ -17,10 +17,10 @@ int main(void) {
     while (RGFW_window_shouldClose(win) == RGFW_FALSE) {
         RGFW_pollEvents();
         if (RGFW_isMousePressed(RGFW_mouseLeft)) {
-            if (mouse < RGFW_mouseIconCount) mouse++;
-            else mouse = 0;
-
 			RGFW_window_setMouse(win, icons[mouse]);
+
+			if (mouse < RGFW_mouseIconCount - 1) mouse++;
+            else mouse = 0;
         }
     }
 
