@@ -128,10 +128,6 @@ int main() {
 	Credits :
 		EimaMei/Sacode : Code review, helped with X11, MacOS and Windows support, Silicon, siliapp.h -> referencing
 
-		stb : This project is heavily inspired by the stb single header files
-
-		SDL, GLFW and other online resources : reference implementations
-
 		contributors : (feel free to put yourself here if you contribute)
 		krisvers (@krisvers) -> code review
 		EimaMei (@SaCode) -> code review
