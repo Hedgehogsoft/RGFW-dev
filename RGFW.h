@@ -13353,19 +13353,6 @@ static id RGFW__osxCustomInitWithRGFWWindow(id self, SEL _cmd, RGFW_window* win)
         );
 
         ((void (*)(id, SEL))objc_msgSend)(self, sel_registerName("updateTrackingAreas"));
-
-        ((void (*)(id, SEL, id))objc_msgSend)(
-            self, sel_registerName("registerForDraggedTypes:"),
-            ((id (*)(Class, SEL, id))objc_msgSend)(
-                objc_getClass("NSArray"),
-                sel_registerName("arrayWithObject:"),
-                ((id (*)(Class, SEL, const char*))objc_msgSend)(
-                    objc_getClass("NSString"),
-                    sel_registerName("stringWithUTF8String:"),
-                    "public.url"
-                )
-            )
-        );
     }
 
     return self;
@@ -14145,13 +14132,6 @@ RGFW_window* RGFW_createWindowPlatform(const char* name, RGFW_windowFlags flags,
 
 	objc_msgSend_void_id((id)win->src.window, sel_registerName("setDelegate:"), (id)win->src.delegate);
 
-	if (flags & RGFW_windowAllowDND) {
-		win->internal.flags |= RGFW_windowAllowDND;
-
-		NSPasteboardType types[] = {NSPasteboardTypeURL, NSPasteboardTypeFileURL, NSPasteboardTypeString};
-		NSregisterForDraggedTypes((id)win->src.window, types, 3);
-	}
-
 	objc_msgSend_void_bool((id)win->src.window, sel_registerName("setAcceptsMouseMovedEvents:"), true);
 
 	if (flags & RGFW_windowTransparent) {
@@ -14173,6 +14153,14 @@ RGFW_window* RGFW_createWindowPlatform(const char* name, RGFW_windowFlags flags,
 	NSRetain(win->src.window);
 
 	win->src.view = ((id(*)(id, SEL, RGFW_window*))objc_msgSend) (NSAlloc((Class)_RGFW->customViewClasses[0]), sel_registerName("initWithRGFWWindow:"), win);
+
+	if (flags & RGFW_windowAllowDND) {
+		win->internal.flags |= RGFW_windowAllowDND;
+
+		NSPasteboardType types[] = {NSPasteboardTypeURL, NSPasteboardTypeFileURL, NSPasteboardTypeString};
+		NSregisterForDraggedTypes((id)win->src.view, types, 3);
+	}
+
 	return win;
 }
 
