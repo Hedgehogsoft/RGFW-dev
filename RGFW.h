@@ -13030,12 +13030,15 @@ PFN_LMGetKbdType LMGetKbdTypeSrc;
 
 CFStringRef kTISPropertyUnicodeKeyLayoutDataSrc;
 
+#define RSGL_NSPasteboardTypeURL "public.url"
+#define RSGL_NSPasteboardTypeFileURL "public.file-url"
+#define RSGL_NSPasteboardTypeString "public.utf8-plain-text"
+
 #ifndef  __OBJC__
 typedef CGRect NSRect;
 typedef CGPoint NSPoint;
 typedef CGSize NSSize;
 
-typedef const char* NSPasteboardType;
 typedef unsigned long NSUInteger;
 typedef long NSInteger;
 typedef NSInteger NSModalResponse;
@@ -13072,8 +13075,6 @@ typedef RGFW_ENUM(u32, NSWindowStyleMask) {
 		NSWindowStyleMaskNonactivatingpanel = 1 << 7,
 		NSWindowStyleMaskHUDWindow = 1 << 13
 };
-
-#define NSPasteboardTypeString "public.utf8-plain-text"
 
 typedef RGFW_ENUM(i32, NSDragOperation) {
 	NSDragOperationNone = 0,
@@ -13115,8 +13116,6 @@ typedef RGFW_ENUM(NSInteger, NSWindowButton) {
     NSWindowFullScreenButton       = 7,
 };
 
-#define NSPasteboardTypeURL "public.url"
-#define NSPasteboardTypeFileURL "public.file-url"
 #define NSTrackingMouseEnteredAndExited   0x01
 #define NSTrackingMouseMoved              0x02
 #define NSTrackingCursorUpdate            0x04
@@ -13279,8 +13278,8 @@ id* cstrToNSStringArray(char** strs, size_t len) {
 	return nstrs;
 }
 
-const char* NSPasteboard_stringForType(id pasteboard, NSPasteboardType dataType, size_t* len);
-const char* NSPasteboard_stringForType(id pasteboard, NSPasteboardType dataType, size_t* len) {
+const char* NSPasteboard_stringForType(id pasteboard, const char* dataType, size_t* len);
+const char* NSPasteboard_stringForType(id pasteboard, const char* dataType, size_t* len) {
 	SEL func = sel_registerName("stringForType:");
 	id nsstr = NSString_stringWithUTF8String((const char*)dataType);
 	id nsString = ((id(*)(id, SEL, id))objc_msgSend)(pasteboard, func, nsstr);
@@ -13296,8 +13295,8 @@ id c_array_to_NSArray(void* array, size_t len) {
 }
 
 
-void NSregisterForDraggedTypes(id view, NSPasteboardType* newTypes, size_t len);
-void NSregisterForDraggedTypes(id view, NSPasteboardType* newTypes, size_t len) {
+void NSregisterForDraggedTypes(id view, const char* newTypes, size_t len);
+void NSregisterForDraggedTypes(id view, const char* newTypes, size_t len) {
 	id* ntypes = cstrToNSStringArray((char**)newTypes, len);
 
 	id array = c_array_to_NSArray(ntypes, len);
@@ -13305,8 +13304,8 @@ void NSregisterForDraggedTypes(id view, NSPasteboardType* newTypes, size_t len) 
 	NSRelease(array);
 }
 
-NSInteger NSPasteBoard_declareTypes(id pasteboard, NSPasteboardType* newTypes, size_t len, void* owner);
-NSInteger NSPasteBoard_declareTypes(id pasteboard, NSPasteboardType* newTypes, size_t len, void* owner) {
+NSInteger NSPasteBoard_declareTypes(id pasteboard, const char* newTypes, size_t len, void* owner);
+NSInteger NSPasteBoard_declareTypes(id pasteboard, const char* newTypes, size_t len, void* owner) {
 	id* ntypes = cstrToNSStringArray((char**)newTypes, len);
 
 	SEL func = sel_registerName("declareTypes:owner:");
@@ -13446,7 +13445,16 @@ static bool RGFW__osxPerformDragOperation(id self, SEL sel, id sender) {
 		return 0;
 	}
 
-	id fileURLs = objc_msgSend_id_id(pasteBoard, sel_registerName("propertyListForType:"), fileURLsType);
+	id propertyList = objc_msgSend_id_id(pasteBoard, sel_registerName("propertyListForType:"), fileURLsType);
+
+	if (objc_msgSend_id_bool(propertyList, sel_registerName("isKindOfClass:"),u objc_getClass("NSString"))) {
+		int string_count = ((int (*)(id, SEL))objc_msgSend)(propertyList , sel_registerName("count"));
+		const char *filePath = ((const char* (*)(id, SEL))objc_msgSend)(propertyList, sel_registerName("UTF8String"));
+		RGFW_dataDropCallback(win, filePath, (size_t)string_count + 1, RGFW_dataFile);
+	/*} if (objc_msgSend_id_bool(propertyList, sel_registerName("isKindOfClass:"), objc_getClass("NSData"))) { */
+	} if (objc_msgSend_id_bool(propertyList, sel_registerName("isKindOfClass:"), objc_getClass("NSArray")) == false) return false;
+
+	fileURLs = retClass; 
 	int count = ((int (*)(id, SEL))objc_msgSend)(fileURLs, sel_registerName("count"));
 
 	if (count == 0)
@@ -13456,7 +13464,7 @@ static bool RGFW__osxPerformDragOperation(id self, SEL sel, id sender) {
     for (i = 0; i < (u32)count; i++) {
 		id fileURL = objc_msgSend_arr(fileURLs, sel_registerName("objectAtIndex:"), i);
 		const char *filePath = ((const char* (*)(id, SEL))objc_msgSend)(fileURL, sel_registerName("UTF8String"));
-		int string_count = ((int (*)(id, SEL))objc_msgSend)(fileURL, sel_registerName("length"));
+		int string_count = ((int (*)(id, SEL))objc_msgSend)(fileURL, sel_registerName("count"));
 
 		RGFW_dataDropCallback(win, filePath, (size_t)string_count + 1, RGFW_dataFile);
 	}
@@ -14046,13 +14054,6 @@ i32 RGFW_initPlatform(const char* className, RGFW_initFlags flags) {
 		class_addMethod((Class)_RGFW->customViewClasses[i], sel_registerName("initWithRGFWWindow:"), (IMP)RGFW__osxCustomInitWithRGFWWindow, "@@:{CGRect={CGPoint=dd}{CGSize=dd}}");
 		class_addMethod((Class)_RGFW->customViewClasses[i], sel_registerName("wantsUpdateLayer"), (IMP)RGFW__osxWantsUpdateLayer, "B@:");
 		class_addMethod((Class)_RGFW->customViewClasses[i], sel_registerName("updateLayer"), (IMP)RGFW__osxUpdateLayer, "v@:");
-		class_addMethod((Class)_RGFW->customViewClasses[i], sel_registerName("draggingEntered:"), (IMP)RGFW__osxDraggingEntered, "l@:@");
-		class_addMethod((Class)_RGFW->customViewClasses[i], sel_registerName("draggingUpdated:"), (IMP)RGFW__osxDraggingUpdated, "l@:@");
-		class_addMethod((Class)_RGFW->customViewClasses[i], sel_registerName("draggingExited:"), (IMP)RGFW__osxDraggingEnded, "v@:@");
-		class_addMethod((Class)_RGFW->customViewClasses[i], sel_registerName("draggingEnded:"), (IMP)RGFW__osxDraggingEnded, "v@:@");
-		class_addMethod((Class)_RGFW->customViewClasses[i], sel_registerName("prepareForDragOperation:"), (IMP)RGFW__osxPrepareForDragOperation, "B@:@");
-		class_addMethod((Class)_RGFW->customViewClasses[i], sel_registerName("performDragOperation:"), (IMP)RGFW__osxPerformDragOperation, "B@:@");
-
 		objc_registerClassPair((Class)_RGFW->customViewClasses[i]);
 	}
 
@@ -14064,8 +14065,12 @@ i32 RGFW_initPlatform(const char* className, RGFW_initFlags flags) {
 	class_addMethod((Class)_RGFW->customWindowDelegateClass, sel_registerName("windowDidDeminiaturize:"), (IMP) RGFW__osxWindowDeminiaturize, "");
 	class_addMethod((Class)_RGFW->customWindowDelegateClass, sel_registerName("windowDidBecomeKey:"), (IMP) RGFW__osxWindowBecameKey, "");
 	class_addMethod((Class)_RGFW->customWindowDelegateClass, sel_registerName("windowDidResignKey:"), (IMP) RGFW__osxWindowResignKey, "");
-
-
+	class_addMethod((Class)_RGFW->customWindowDelegateClass, sel_registerName("draggingEntered:"), (IMP)RGFW__osxDraggingEntered, "l@:@");
+	class_addMethod((Class)_RGFW->customWindowDelegateClass, sel_registerName("draggingUpdated:"), (IMP)RGFW__osxDraggingUpdated, "l@:@");
+	class_addMethod((Class)_RGFW->customWindowDelegateClass, sel_registerName("draggingExited:"), (IMP)RGFW__osxDraggingEnded, "v@:@");
+	class_addMethod((Class)_RGFW->customWindowDelegateClass, sel_registerName("draggingEnded:"), (IMP)RGFW__osxDraggingEnded, "v@:@");
+	class_addMethod((Class)_RGFW->customWindowDelegateClass, sel_registerName("prepareForDragOperation:"), (IMP)RGFW__osxPrepareForDragOperation, "B@:@");
+	class_addMethod((Class)_RGFW->customWindowDelegateClass, sel_registerName("performDragOperation:"), (IMP)RGFW__osxPerformDragOperation, "B@:@");
 	objc_registerClassPair((Class)_RGFW->customWindowDelegateClass);
 	return 0;
 }
@@ -14160,7 +14165,7 @@ RGFW_window* RGFW_createWindowPlatform(const char* name, RGFW_windowFlags flags,
 	if (flags & RGFW_windowAllowDND) {
 		win->internal.flags |= RGFW_windowAllowDND;
 
-		NSPasteboardType types[] = {NSPasteboardTypeURL, NSPasteboardTypeFileURL, NSPasteboardTypeString};
+		char types[] = {RSGL_NSPasteboardTypeURL, RSGL_NSPasteboardTypeFileURL, RSGL_NSPasteboardTypeString};
 		NSregisterForDraggedTypes((id)win->src.view, types, 3);
 	}
 
@@ -14944,7 +14949,7 @@ RGFW_bool RGFW_readClipboardPtr(RGFW_dataTransferType requestedType, u8* buffer,
 	if (requestedType != RGFW_dataText) return RGFW_FALSE;
 
 	size_t length = 0;
-	char* clip = (char*)NSPasteboard_stringForType(NSPasteboard_generalPasteboard(), NSPasteboardTypeString, &length);
+	char* clip = (char*)NSPasteboard_stringForType(NSPasteboard_generalPasteboard(), RSGL_NSPasteboardTypeString, &length);
 	if (clip == NULL) return RGFW_FALSE;
 
 	data->type = RGFW_dataText;
@@ -14965,12 +14970,12 @@ RGFW_bool RGFW_readClipboardPtr(RGFW_dataTransferType requestedType, u8* buffer,
 RGFW_bool RGFW_writeClipboard(const RGFW_dataTransfer* data) {
 	RGFW_ASSERT(data != NULL);
 
-	NSPasteboardType array[] = { NSPasteboardTypeString, NULL };
+	const char* array[] = { RSGL_NSPasteboardTypeString, NULL };
 	NSPasteBoard_declareTypes(NSPasteboard_generalPasteboard(), array, 1, NULL);
 
 	SEL func = sel_registerName("setString:forType:");
 	bool ret = ((bool (*)(id, SEL, id, id))objc_msgSend)
-		(NSPasteboard_generalPasteboard(), func, NSString_stringWithUTF8String(data->data), NSString_stringWithUTF8String((const char*)NSPasteboardTypeString));
+		(NSPasteboard_generalPasteboard(), func, NSString_stringWithUTF8String(data->data), NSString_stringWithUTF8String((const char*)RSGL_NSPasteboardTypeString));
 
 	return (ret == true) ? RGFW_TRUE : RGFW_FALSE;
 }
