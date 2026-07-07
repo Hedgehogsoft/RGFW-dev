@@ -13352,7 +13352,11 @@ static id RGFW__osxCustomInitWithRGFWWindow(id self, SEL _cmd, RGFW_window* win)
         );
 
         ((void (*)(id, SEL))objc_msgSend)(self, sel_registerName("updateTrackingAreas"));
-    }
+    
+		const char* types[] = {RSGL_NSPasteboardTypeURL, RSGL_NSPasteboardTypeFileURL, RSGL_NSPasteboardTypeString};
+		NSregisterForDraggedTypes((id)self, types, 3);
+
+	}
 
     return self;
 }
@@ -14148,6 +14152,10 @@ RGFW_window* RGFW_createWindowPlatform(const char* name, RGFW_windowFlags flags,
 		NSColor_colorWithSRGB(0, 0, 0, 0));
 	}
 
+	if (flags & RGFW_windowAllowDND) {
+		win->internal.flags |= RGFW_windowAllowDND;
+	}
+
 	/* Show the window */
 	objc_msgSend_void_bool((id)_RGFW->NSApp, sel_registerName("activateIgnoringOtherApps:"), true);
 
@@ -14160,14 +14168,6 @@ RGFW_window* RGFW_createWindowPlatform(const char* name, RGFW_windowFlags flags,
 	NSRetain(win->src.window);
 
 	win->src.view = ((id(*)(id, SEL, RGFW_window*))objc_msgSend) (NSAlloc((Class)_RGFW->customViewClasses[0]), sel_registerName("initWithRGFWWindow:"), win);
-
-	if (flags & RGFW_windowAllowDND) {
-		win->internal.flags |= RGFW_windowAllowDND;
-
-		const char* types[] = {RSGL_NSPasteboardTypeURL, RSGL_NSPasteboardTypeFileURL, RSGL_NSPasteboardTypeString};
-		NSregisterForDraggedTypes((id)win->src.view, types, 3);
-	}
-
 	return win;
 }
 
