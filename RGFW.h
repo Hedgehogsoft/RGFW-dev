@@ -16341,7 +16341,7 @@ void RGFW_window_resizePlatform(RGFW_window* win, i32 w, i32 h) { RGFW_api.windo
 void RGFW_window_setAspectRatio(RGFW_window* win, i32 w, i32 h) { RGFW_api.window_setAspectRatio(win, w, h); }
 void RGFW_window_setMinSize(RGFW_window* win, i32 w, i32 h) { RGFW_api.window_setMinSize(win, w, h); }
 void RGFW_window_setMaxSize(RGFW_window* win, i32 w, i32 h) { RGFW_api.window_setMaxSize(win, w, h); }
-void RGFW_window_maximize(RGFW_window* win) { RGFW_api.window_maximizePlatform(win); }
+void RGFW_window_maximizePlatform(RGFW_window* win) { RGFW_api.window_maximizePlatform(win); }
 void RGFW_window_focus(RGFW_window* win) { RGFW_api.window_focus(win); }
 void RGFW_window_raise(RGFW_window* win) { RGFW_api.window_raise(win); }
 void RGFW_window_setFullscreen(RGFW_window* win, RGFW_bool fullscreen) { RGFW_api.window_setFullscreen(win, fullscreen); }
