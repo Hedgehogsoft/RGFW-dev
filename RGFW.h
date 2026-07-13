@@ -3374,7 +3374,7 @@ RGFWDEF void RGFW_window_restorePlatform(RGFW_window* win);
 RGFWDEF void RGFW_window_minimizePlatform(RGFW_window* win);
 RGFWDEF void RGFW_window_movePlatform(RGFW_window* win, i32 x, i32 y);
 RGFWDEF void RGFW_window_resizePlatform(RGFW_window* win, i32 w, i32 h);
-
+RGFWDEF void RGFW_window_maximizePlatform(RGFW_window* win);
 RGFWDEF void RGFW_window_setFlagsInternal(RGFW_window* win, RGFW_windowFlags flags, RGFW_windowFlags cmpFlags);
 
 RGFWDEF void RGFW_initKeycodes(void);
@@ -5132,6 +5132,18 @@ void RGFW_window_restore(RGFW_window* win) {
 void RGFW_window_minimize(RGFW_window* win) {
 	RGFW_window_minimizePlatform(win);
 	win->internal.flags &= ~(u32)RGFW_windowMaximize;
+}
+
+void RGFW_window_maximize(RGFW_window* win) {
+	RGFW_ASSERT(win != NULL);	
+	win->internal.oldX = win->x;
+	win->internal.oldY = win->y;
+	win->internal.oldW = win->w;
+	win->internal.oldH = win->h;
+	win->internal.flags |= RGFW_windowMaximize;
+	RGFW_window_fetchSize(win, NULL, NULL);
+
+	RGFW_window_maximizePlatform(win);
 }
 
 void RGFW_window_move(RGFW_window* win, i32 x, i32 y) {
@@ -7728,14 +7740,8 @@ void RGFW_toggleXMaximized(RGFW_window* win, RGFW_bool maximized) {
 	XSendEvent(_RGFW->display, DefaultRootWindow(_RGFW->display), False, SubstructureRedirectMask | SubstructureNotifyMask, &xev);
 }
 
-void RGFW_FUNC(RGFW_window_maximize) (RGFW_window* win) {
-	win->internal.oldX = win->x;
-	win->internal.oldY = win->y;
-	win->internal.oldW = win->w;
-	win->internal.oldH = win->h;
-
+void RGFW_FUNC(RGFW_window_maximizePlatform) (RGFW_window* win) {
     RGFW_toggleXMaximized(win, 1);
-	RGFW_window_fetchSize(win, NULL, NULL);
     return;
 }
 
@@ -10421,13 +10427,8 @@ void RGFW_toggleWaylandMaximized(RGFW_window* win, RGFW_bool maximized) {
     }
 }
 
-void RGFW_FUNC(RGFW_window_maximize) (RGFW_window* win) {
-	win->internal.oldX = win->x;
-	win->internal.oldY = win->y;
-	win->internal.oldW = win->w;
-	win->internal.oldH = win->h;
+void RGFW_FUNC(RGFW_window_maximizePlatform) (RGFW_window* win) {
     RGFW_toggleWaylandMaximized(win, 1);
-	RGFW_window_fetchSize(win, NULL, NULL);
     return;
 }
 
@@ -11906,11 +11907,10 @@ void RGFW_window_setFullscreen(RGFW_window* win, RGFW_bool fullscreen) {
 	win->h = mon->mode.h;
 }
 
-void RGFW_window_maximize(RGFW_window* win) {
+void RGFW_window_maximizePlatform(RGFW_window* win) {
 	RGFW_ASSERT(win != NULL);
 	RGFW_window_hide(win);
 	ShowWindow(win->src.window, SW_MAXIMIZE);
-	RGFW_window_fetchSize(win, NULL, NULL);
 }
 
 void RGFW_window_minimizePlatform(RGFW_window* win) {
@@ -14413,13 +14413,10 @@ void RGFW_window_setFullscreen(RGFW_window* win, RGFW_bool fullscreen) {
 	}
 }
 
-void RGFW_window_maximize(RGFW_window* win) {
-	RGFW_ASSERT(win != NULL);
+void RGFW_window_maximizePlatform(RGFW_window* win) {
 	if (RGFW_window_isMaximized(win)) return;
 
-	win->internal.flags |= RGFW_windowMaximize;
 	objc_msgSend_void_SEL(win->src.window, sel_registerName("zoom:"), NULL);
-	RGFW_window_fetchSize(win, NULL, NULL);
 }
 
 void RGFW_window_minimizePlatform(RGFW_window* win) {
@@ -15989,16 +15986,13 @@ void RGFW_window_setName(RGFW_window* win, const char* name) {
 	emscripten_set_window_title(name);
 }
 
-void RGFW_window_maximize(RGFW_window* win) {
-	RGFW_ASSERT(win != NULL);
-
+void RGFW_window_maximizePlatform(RGFW_window* win) {
 	RGFW_monitor* mon = RGFW_window_getMonitor(win);
 	if (mon != NULL) {
 		RGFW_window_resize(win, mon->mode.w, mon->mode.h);
 	}
 
 	RGFW_window_move(win, 0, 0);
-	RGFW_window_fetchSize(win, NULL, NULL);
 }
 
 void RGFW_window_setFullscreen(RGFW_window* win, RGFW_bool fullscreen) {
@@ -16284,7 +16278,7 @@ typedef struct RGFW_FunctionPointers {
     RGFW_window_setFullscreen_ptr window_setFullscreen;
     RGFW_window_setFloating_ptr window_setFloating;
     RGFW_window_setOpacity_ptr window_setOpacity;
-    RGFW_window_minimize_ptr window_minimize;
+    RGFW_window_minimize_ptr window_minimizePlatform;
     RGFW_window_restore_ptr window_restorePlatform;
     RGFW_window_isFloating_ptr window_isFloating;
     RGFW_window_setName_ptr window_setName;
@@ -16354,7 +16348,7 @@ void RGFW_window_setFullscreen(RGFW_window* win, RGFW_bool fullscreen) { RGFW_ap
 void RGFW_window_setFloating(RGFW_window* win, RGFW_bool floating) { RGFW_api.window_setFloating(win, floating); }
 void RGFW_window_setOpacity(RGFW_window* win, u8 opacity) { RGFW_api.window_setOpacity(win, opacity); }
 void RGFW_window_minimizePlatform(RGFW_window* win) { RGFW_api.window_minimizePlatform(win); }
-void RGFW_window_restorePlatform(RGFW_window* win) { RGFW_api.window_restorePlaform(win); }
+void RGFW_window_restorePlatform(RGFW_window* win) { RGFW_api.window_restorePlatform(win); }
 RGFW_bool RGFW_window_isFloating(RGFW_window* win) { return RGFW_api.window_isFloating(win); }
 void RGFW_window_setName(RGFW_window* win, const char* name) { RGFW_api.window_setName(win, name); }
 
