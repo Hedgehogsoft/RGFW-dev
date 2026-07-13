@@ -3369,6 +3369,11 @@ struct RGFW_info {
 RGFWDEF RGFW_window* RGFW_createWindowPlatform(const char* name, RGFW_windowFlags flags, RGFW_window* win);
 RGFWDEF void RGFW_window_closePlatform(RGFW_window* win);
 RGFWDEF RGFW_bool RGFW_window_setMousePlatform(RGFW_window* win, RGFW_mouse* mouse);
+RGFWDEF void RGFW_window_showPlatform(RGFW_window* win);
+RGFWDEF void RGFW_window_restorePlatform(RGFW_window* win);
+RGFWDEF void RGFW_window_minimizePlatform(RGFW_window* win);
+RGFWDEF void RGFW_window_movePlatform(RGFW_window* win, i32 x, i32 y);
+RGFWDEF void RGFW_window_resizePlatform(RGFW_window* win, i32 w, i32 h);
 
 RGFWDEF void RGFW_window_setFlagsInternal(RGFW_window* win, RGFW_windowFlags flags, RGFW_windowFlags cmpFlags);
 
@@ -4234,9 +4239,11 @@ RGFW_window* RGFW_createWindowPtr(const char* name, i32 x, i32 y, i32 w, i32 h, 
 	if (!(flags & RGFW_windowHide)) {
 		flags |= RGFW_windowHide;
 		RGFW_window_show(win);
+	} else if ((flags & RGFW_windowMaximize) || (flags & RGFW_windowFullscreen)) {
+		RGFW_window_hide(win);
 	}
 
-	RGFW_debugCallback(RGFW_typeInfo, RGFW_infoWindow, "a new window was created");
+	return ret;	RGFW_debugCallback(RGFW_typeInfo, RGFW_infoWindow, "a new window was created");
 
 	return ret;
 }
@@ -5109,6 +5116,44 @@ u32 RGFW_decodeUTF8(const char* string, size_t* starting_index) {
 
     RGFW_ASSERT(count <= 6);
     return codepoint - offsets[count - 1];
+}
+
+void RGFW_window_show(RGFW_window* win) {
+	if (win->internal.flags & RGFW_windowFocusOnShow) RGFW_window_focus(win);
+	RGFW_window_showPlatform(win);
+	if ((win->internal.flags & RGFW_windowMaximize)) RGFW_window_maximize(win);
+}
+
+void RGFW_window_restore(RGFW_window* win) {
+	RGFW_window_restorePlatform(win);
+	if ((win->internal.flags & RGFW_windowMaximize)) {
+		win->internal.flags &= ~(u32)RGFW_windowMaximize;
+	}
+}
+
+void RGFW_window_minimize(RGFW_window* win) {
+	RGFW_window_minimizePlatform(win);
+	if ((win->internal.flags & RGFW_windowMaximize)) {
+		win->internal.flags &= ~(u32)RGFW_windowMaximize;
+	}
+}
+
+void RGFW_window_move(RGFW_window* win, i32 x, i32 y) {
+	win->x = x;
+	win->y = y;
+	RGFW_window_movePlatform(win, x, y);
+	if ((win->internal.flags & RGFW_windowMaximize)) {
+		win->internal.flags &= ~(u32)RGFW_windowMaximize;
+	}
+}
+
+void RGFW_window_resize(RGFW_window* win, i32 w, i32 h) {
+	win->w = w;
+	win->h = h;
+	RGFW_window_resizePlatform(win, w, h);
+	if ((win->internal.flags & RGFW_windowMaximize)) {
+		win->internal.flags &= ~(u32)RGFW_windowMaximize;
+	}
 }
 
 /*
@@ -7589,7 +7634,7 @@ void RGFW_FUNC(RGFW_pollEvents) (void) {
 	}
 }
 
-void RGFW_FUNC(RGFW_window_move) (RGFW_window* win, i32 x, i32 y) {
+void RGFW_FUNC(RGFW_window_movePlatform) (RGFW_window* win, i32 x, i32 y) {
 	RGFW_ASSERT(win != NULL);
 	win->x = x;
 	win->y = y;
@@ -7599,7 +7644,7 @@ void RGFW_FUNC(RGFW_window_move) (RGFW_window* win, i32 x, i32 y) {
 }
 
 
-void RGFW_FUNC(RGFW_window_resize) (RGFW_window* win, i32 w, i32 h) {
+void RGFW_FUNC(RGFW_window_resizePlatform) (RGFW_window* win, i32 w, i32 h) {
 	RGFW_ASSERT(win != NULL);
 	win->w = (i32)w;
 	win->h = (i32)h;
@@ -7986,7 +8031,7 @@ void RGFW_FUNC(RGFW_window_hide)(RGFW_window* win) {
 	XFlush(_RGFW->display);
 }
 
-void RGFW_FUNC(RGFW_window_show) (RGFW_window* win) {
+void RGFW_FUNC(RGFW_window_showPlatform) (RGFW_window* win) {
 	win->internal.flags &= ~(u32)RGFW_windowHide;
 	if (win->internal.flags & RGFW_windowFocusOnShow) RGFW_window_focus(win);
 
@@ -7999,6 +8044,7 @@ void RGFW_FUNC(RGFW_window_show) (RGFW_window* win) {
 
 	RGFW_waitForShowEvent_X11(win);
 	RGFW_window_setFullscreen(win, RGFW_window_isFullscreen(win));
+	if ((win->internal.flags & RGFW_windowMaximize)) RGFW_window_maximize(win);
 	return;
 }
 
@@ -10342,14 +10388,14 @@ void RGFW_FUNC(RGFW_pollEvents) (void) {
 	}
 }
 
-void RGFW_FUNC(RGFW_window_move) (RGFW_window* win, i32 x, i32 y) {
+void RGFW_FUNC(RGFW_window_movePlatform) (RGFW_window* win, i32 x, i32 y) {
 	RGFW_ASSERT(win != NULL);
 	win->x = x;
 	win->y = y;
 }
 
 
-void RGFW_FUNC(RGFW_window_resize) (RGFW_window* win, i32 w, i32 h) {
+void RGFW_FUNC(RGFW_window_resizePlatform) (RGFW_window* win, i32 w, i32 h) {
 	RGFW_ASSERT(win != NULL);
 	win->w = w;
 	win->h = h;
@@ -10593,11 +10639,12 @@ void RGFW_FUNC(RGFW_window_hide) (RGFW_window* win) {
 	win->internal.flags |= RGFW_windowHide;
 }
 
-void RGFW_FUNC(RGFW_window_show) (RGFW_window* win) {
+void RGFW_FUNC(RGFW_window_showPlatform) (RGFW_window* win) {
 	win->internal.flags &= ~(u32)RGFW_windowHide;
 	if (win->internal.flags & RGFW_windowFocusOnShow) RGFW_window_focus(win);
 	/* wl_surface_attach(win->src.surface, win->x, win->y, win->w, win->h, 0, 0); */
 	wl_surface_commit(win->src.surface);
+	if ((win->internal.flags & RGFW_windowMaximize)) RGFW_window_maximize(win);
 }
 
 void RGFW_FUNC(RGFW_window_flash) (RGFW_window* win, RGFW_flashRequest request) {
@@ -12498,9 +12545,10 @@ void RGFW_window_hide(RGFW_window* win) {
 	ShowWindow(win->src.window, SW_HIDE);
 }
 
-void RGFW_window_show(RGFW_window* win) {
+void RGFW_window_showPlatform(RGFW_window* win) {
 	if (win->internal.flags & RGFW_windowFocusOnShow) RGFW_window_focus(win);
 	ShowWindow(win->src.window, SW_RESTORE);
+	if ((win->internal.flags & RGFW_windowMaximize)) RGFW_window_maximize(win);
 }
 
 void RGFW_window_flash(RGFW_window* win, RGFW_flashRequest request) {
@@ -12564,7 +12612,7 @@ void RGFW_window_closePlatform(RGFW_window* win) {
 	if (win->src.hIconBig) DestroyIcon(win->src.hIconBig);
 }
 
-void RGFW_window_move(RGFW_window* win, i32 x, i32 y) {
+void RGFW_window_movePlatform(RGFW_window* win, i32 x, i32 y) {
 	RGFW_ASSERT(win != NULL);
 
 	win->x = x;
@@ -12572,7 +12620,7 @@ void RGFW_window_move(RGFW_window* win, i32 x, i32 y) {
 	SetWindowPos(win->src.window, HWND_TOP, win->x, win->y, 0, 0, SWP_NOSIZE);
 }
 
-void RGFW_window_resize(RGFW_window* win, i32 w, i32 h) {
+void RGFW_window_resizePlatform(RGFW_window* win, i32 w, i32 h) {
 	RGFW_ASSERT(win != NULL);
 
 	win->w = w;
@@ -14306,7 +14354,7 @@ void RGFW_pollEvents(void) {
 }
 
 
-void RGFW_window_move(RGFW_window* win, i32 x, i32 y) {
+void RGFW_window_movePlatform(RGFW_window* win, i32 x, i32 y) {
 	RGFW_ASSERT(win != NULL);
 
 	NSRect content = ((NSRect(*)(id, SEL))abi_objc_msgSend_stret)((id)win->src.view, sel_registerName("frame"));
@@ -14317,7 +14365,7 @@ void RGFW_window_move(RGFW_window* win, i32 x, i32 y) {
 	((void(*)(id,SEL,NSPoint))objc_msgSend)((id)win->src.window, sel_registerName("setFrameOrigin:"), (NSPoint){(double)x, (double)y});
 }
 
-void RGFW_window_resize(RGFW_window* win, i32 w, i32 h) {
+void RGFW_window_resizePlatform(RGFW_window* win, i32 w, i32 h) {
 	RGFW_ASSERT(win != NULL);
 
 	NSRect frame = ((NSRect(*)(id, SEL))abi_objc_msgSend_stret)((id)win->src.window, sel_registerName("frame"));
@@ -14610,12 +14658,13 @@ void RGFW_window_hide(RGFW_window* win) {
 	objc_msgSend_void_bool(win->src.window, sel_registerName("setIsVisible:"), false);
 }
 
-void RGFW_window_show(RGFW_window* win) {
+void RGFW_window_showPlatform(RGFW_window* win) {
 	if (win->internal.flags & RGFW_windowFocusOnShow)
 		((id(*)(id, SEL, SEL))objc_msgSend)((id)win->src.window, sel_registerName("makeKeyAndOrderFront:"), NULL);
 
 	((id(*)(id, SEL, SEL))objc_msgSend)((id)win->src.window, sel_registerName("orderFront:"), NULL);
 	objc_msgSend_void_bool(win->src.window, sel_registerName("setIsVisible:"), true);
+	if ((win->internal.flags & RGFW_windowMaximize)) RGFW_window_maximize(win);
 }
 
 void RGFW_window_flash(RGFW_window* win, RGFW_flashRequest request) {
@@ -15732,7 +15781,7 @@ void RGFW_pollEvents(void) {
 	}
 }
 
-void RGFW_window_resize(RGFW_window* win, i32 w, i32 h) {
+void RGFW_window_resizePlatform(RGFW_window* win, i32 w, i32 h) {
 	RGFW_UNUSED(win);
 	emscripten_set_canvas_element_size("#canvas", w, h);
 }
@@ -16142,7 +16191,7 @@ size_t RGFW_monitor_getGammaRampPtr(RGFW_monitor* monitor, RGFW_gammaRamp* ramp)
 RGFW_bool RGFW_monitor_setGammaRamp(RGFW_monitor* monitor, RGFW_gammaRamp* ramp) { RGFW_UNUSED(monitor); RGFW_UNUSED(ramp); return RGFW_FALSE; }
 size_t RGFW_monitor_getModesPtr(RGFW_monitor* mon, RGFW_monitorMode** modes) { RGFW_UNUSED(mon); RGFW_UNUSED(modes); return 0; }
 RGFW_bool RGFW_monitor_setMode(RGFW_monitor* mon, RGFW_monitorMode* mode) { RGFW_UNUSED(mon); RGFW_UNUSED(mode); return RGFW_FALSE; }
-void RGFW_window_move(RGFW_window* win, i32 x, i32 y) { RGFW_UNUSED(win);  RGFW_UNUSED(x); RGFW_UNUSED(y);  }
+void RGFW_window_movePlatform(RGFW_window* win, i32 x, i32 y) { RGFW_UNUSED(win);  RGFW_UNUSED(x); RGFW_UNUSED(y);  }
 void RGFW_window_setAspectRatio(RGFW_window* win, i32 w, i32 h) { RGFW_UNUSED(win);  RGFW_UNUSED(w); RGFW_UNUSED(h);  }
 void RGFW_window_setMinSize(RGFW_window* win, i32 w, i32 h) { RGFW_UNUSED(win); RGFW_UNUSED(w); RGFW_UNUSED(h);  }
 void RGFW_window_setMaxSize(RGFW_window* win, i32 w, i32 h) { RGFW_UNUSED(win);  RGFW_UNUSED(w); RGFW_UNUSED(h);  }
@@ -16152,7 +16201,7 @@ void RGFW_window_setFloating(RGFW_window* win, RGFW_bool floating) { RGFW_UNUSED
 void RGFW_window_setBorder(RGFW_window* win, RGFW_bool border) { RGFW_UNUSED(win); RGFW_UNUSED(border);  }
 RGFW_bool RGFW_window_setIconEx(RGFW_window* win, u8* data, i32 w, i32 h, RGFW_format format, RGFW_icon type) { RGFW_UNUSED(win); RGFW_UNUSED(data); RGFW_UNUSED(w); RGFW_UNUSED(h); RGFW_UNUSED(format);  RGFW_UNUSED(type); return RGFW_FALSE;  }
 void RGFW_window_hide(RGFW_window* win) { RGFW_UNUSED(win); }
-void RGFW_window_show(RGFW_window* win) {RGFW_UNUSED(win); }
+void RGFW_window_showPlatform(RGFW_window* win) {RGFW_UNUSED(win); }
 void RGFW_window_flash(RGFW_window* win, RGFW_flashRequest request) { RGFW_UNUSED(win); RGFW_UNUSED(request); }
 RGFW_bool RGFW_window_isHidden(RGFW_window* win) { RGFW_UNUSED(win); return RGFW_FALSE; }
 RGFW_bool RGFW_window_isMinimized(RGFW_window* win) { RGFW_UNUSED(win); return RGFW_FALSE; }
@@ -16319,12 +16368,12 @@ void RGFW_pollEvents(void) { RGFW_api.pollEvents(); }
 RGFW_bool RGFW_window_fetchSize(RGFW_window* win, i32* w, i32* h) { return RGFW_api.window_fetchSize(win, w, h); }
 void RGFW_pollMonitors(void) { RGFW_api.pollMonitors(); }
 void RGFW_monitorNode_free(RGFW_monitorNode* node) { RGFW_api.monitorNode_free(node); }
-void RGFW_window_move(RGFW_window* win, i32 x, i32 y) { RGFW_api.window_move(win, x, y); }
-void RGFW_window_resize(RGFW_window* win, i32 w, i32 h) { RGFW_api.window_resize(win, w, h); }
+void RGFW_window_movePlatform(RGFW_window* win, i32 x, i32 y) { RGFW_api.window_movePlatform(win, x, y); }
+void RGFW_window_resizePlatform(RGFW_window* win, i32 w, i32 h) { RGFW_api.window_resizePlatform(win, w, h); }
 void RGFW_window_setAspectRatio(RGFW_window* win, i32 w, i32 h) { RGFW_api.window_setAspectRatio(win, w, h); }
 void RGFW_window_setMinSize(RGFW_window* win, i32 w, i32 h) { RGFW_api.window_setMinSize(win, w, h); }
 void RGFW_window_setMaxSize(RGFW_window* win, i32 w, i32 h) { RGFW_api.window_setMaxSize(win, w, h); }
-void RGFW_window_maximize(RGFW_window* win) { RGFW_api.window_maximize(win); }
+void RGFW_window_maximize(RGFW_window* win) { RGFW_api.window_maximizePlatform(win); }
 void RGFW_window_focus(RGFW_window* win) { RGFW_api.window_focus(win); }
 void RGFW_window_raise(RGFW_window* win) { RGFW_api.window_raise(win); }
 void RGFW_window_setFullscreen(RGFW_window* win, RGFW_bool fullscreen) { RGFW_api.window_setFullscreen(win, fullscreen); }
@@ -16345,7 +16394,7 @@ RGFW_mouse* RGFW_createMouseStandard(RGFW_mouseIcon icon) { return RGFW_api.crea
 RGFW_bool RGFW_window_setMousePlatform(RGFW_window* win, RGFW_mouse* mouse) { return RGFW_api.window_setMousePlatform(win, mouse); }
 void RGFW_window_moveMouse(RGFW_window* win, i32 x, i32 y) { RGFW_api.window_moveMouse(win, x, y); }
 void RGFW_window_hide(RGFW_window* win) { RGFW_api.window_hide(win); }
-void RGFW_window_show(RGFW_window* win) { RGFW_api.window_show(win); }
+void RGFW_window_showPlatform(RGFW_window* win) { RGFW_api.window_show(win); }
 void RGFW_window_flash(RGFW_window* win, RGFW_flashRequest request) { RGFW_api.window_flash(win, request); }
 RGFW_bool RGFW_readClipboardPtr(RGFW_dataTransferType requestedType, u8* buffer, size_t capacity, RGFW_dataTransfer* data) { return RGFW_api.readClipboardPtr(requestedType, buffer, capacity, data); }
 RGFW_bool RGFW_writeClipboard(const RGFW_dataTransfer* data) { return RGFW_api.writeClipboard(data); }
