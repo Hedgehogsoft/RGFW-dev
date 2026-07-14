@@ -5190,7 +5190,6 @@ void RGFW_window_resize(RGFW_window* win, i32 w, i32 h) {
 }
 
 void RGFW_window_setFullscreen(RGFW_window* win, RGFW_fullscreenMode fullscreen) {
-	printf("hello\n");
 	RGFW_ASSERT(win != NULL);
 	if (fullscreen) {
 		win->internal.oldX = win->x;
