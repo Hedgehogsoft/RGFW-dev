@@ -12577,6 +12577,11 @@ void RGFW_window_resize(RGFW_window* win, i32 w, i32 h) {
 
 	win->w = w;
 	win->h = h;
+	if (win->internal.flags & RGFW_windowNoResize) {
+		win->src.minSizeW = win->src.maxSizeW = w;
+		win->src.minSizeH = win->src.maxSizeH = h;
+	}
+
 	RECT rect = { 0, 0, w, h};
 	DWORD style = RGFW_winapi_window_getStyle(win, win->internal.flags);
 	DWORD exStyle = RGFW_winapi_window_getExStyle(win, win->internal.flags);
