@@ -4088,6 +4088,17 @@ i32 RGFW_init_ptr(const char* className, RGFW_initFlags flags, RGFW_info* info) 
 		}
 	}
 
+	#if (RGFW_PREALLOCATED_MONITORS)
+		_RGFW->monitors.freeList.head = &_RGFW->monitors.data[0];
+		_RGFW->monitors.freeList.cur = _RGFW->monitors.freeList.head;
+
+		for (size_t i = 1; i < RGFW_PREALLOCATED_MONITORS; i++) {
+			RGFW_monitorNode* newNode = &_RGFW->monitors.data[i];
+			_RGFW->monitors.freeList.cur->next = newNode;
+			_RGFW->monitors.freeList.cur = _RGFW->monitors.freeList.cur->next;
+		}
+	#endif
+
     RGFW_initKeycodes();
     i32 out = RGFW_initPlatform(className, flags);
 	if (out != 0) {
@@ -4101,17 +4112,6 @@ i32 RGFW_init_ptr(const char* className, RGFW_initFlags flags, RGFW_info* info) 
 	for (size_t i = 0; i < RGFW_mouseIconCount; i++) {
         _RGFW->standardMice[i] = RGFW_createMouseStandard((RGFW_mouseIcon)i);
 	}
-
-	#if (RGFW_PREALLOCATED_MONITORS)
-		_RGFW->monitors.freeList.head = &_RGFW->monitors.data[0];
-		_RGFW->monitors.freeList.cur = _RGFW->monitors.freeList.head;
-
-		for (size_t i = 1; i < RGFW_PREALLOCATED_MONITORS; i++) {
-			RGFW_monitorNode* newNode = &_RGFW->monitors.data[i];
-			_RGFW->monitors.freeList.cur->next = newNode;
-			_RGFW->monitors.freeList.cur = _RGFW->monitors.freeList.cur->next;
-		}
-	#endif
 
 	RGFW_pollMonitors();
 
@@ -6530,7 +6530,7 @@ void RGFW_unix_parseURI(RGFW_window* win, char* data) {
 	}
 }
 
-#ifndef RGFW_X11
+#if !defined(RGFW_X11) && defined(RGFW_OPENGL)
 RGFW_bool RGFW_loadGL(void) { return RGFW_FALSE; }
 #endif
 
