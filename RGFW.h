@@ -7035,6 +7035,7 @@ RGFW_bool RGFW_XCreateWindow (XVisualInfo visual, const char* name, RGFW_windowF
 	XSetClassHint(_RGFW->display, win->src.window, &hint);
 
 	XWMHints hints;
+	RGFW_MEMZERO(&hints, sizeof(hints));
 	hints.flags = StateHint;
 	hints.initial_state = NormalState;
 
