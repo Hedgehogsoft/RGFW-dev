@@ -4258,7 +4258,7 @@ RGFW_window* RGFW_createWindowPtr(const char* name, i32 x, i32 y, i32 w, i32 h, 
 		RGFW_window_hide(win);
 	}
 
-	return ret;	RGFW_debugCallback(RGFW_typeInfo, RGFW_infoWindow, "a new window was created");
+	RGFW_debugCallback(RGFW_typeInfo, RGFW_infoWindow, "a new window was created");
 
 	return ret;
 }
@@ -5191,6 +5191,12 @@ void RGFW_window_resize(RGFW_window* win, i32 w, i32 h) {
 
 void RGFW_window_setFullscreen(RGFW_window* win, RGFW_fullscreenMode fullscreen) {
 	RGFW_ASSERT(win != NULL);
+	if ((fullscreen == RGFW_fullscreenExclusive && (win->internal.flags & RGFW_windowFullscreenExclusive)) || 
+		(fullscreen == RGFW_fullscreenBorderless && RGFW_BOOL(win->internal.flags & RGFW_windowFullscreenBorderless)) ||
+		fullscreen == 0 && RGFW_window_isFullscreen(win) == RGFW_FALSE) {
+			return;
+	}
+
 	if (fullscreen) {
 		win->internal.oldX = win->x;
 		win->internal.oldY = win->y;
@@ -14391,8 +14397,6 @@ void RGFW_window_raise(RGFW_window* win) {
 }
 
 void RGFW_window_setFullscreenPlatform(RGFW_window* win, RGFW_bool fullscreen) {
-	if (fullscreen == RGFW_window_isFullscreen(win)) return;
-
 	if (fullscreen) {
 		((id(*)(id, SEL, SEL))objc_msgSend)((id)win->src.window, sel_registerName("orderFront:"), (SEL)NULL);
 		objc_msgSend_void_id(win->src.window, sel_registerName("setLevel:"), 25);
