@@ -5193,7 +5193,7 @@ void RGFW_window_setFullscreen(RGFW_window* win, RGFW_fullscreenMode fullscreen)
 	RGFW_ASSERT(win != NULL);
 	if ((fullscreen == RGFW_fullscreenExclusive && (win->internal.flags & RGFW_windowFullscreenExclusive)) || 
 		(fullscreen == RGFW_fullscreenBorderless && RGFW_BOOL(win->internal.flags & RGFW_windowFullscreenBorderless)) ||
-		fullscreen == 0 && RGFW_window_isFullscreen(win) == RGFW_FALSE) {
+		(fullscreen == 0 && RGFW_window_isFullscreen(win) == RGFW_FALSE)) {
 			return;
 	}
 
