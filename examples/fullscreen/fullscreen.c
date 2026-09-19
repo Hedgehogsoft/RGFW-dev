@@ -1,0 +1,26 @@
+#define RGFW_DEBUG
+#define RGFW_IMPLEMENTATION
+#include "RGFW.h"
+
+int main(void) {
+	RGFW_init("RGFW Example", 0);
+
+    RGFW_window* win = RGFW_createWindow("RGFW flags", 200, 200, 600, 400, RGFW_windowAllowDND);
+    RGFW_window_setExitKey(win, RGFW_keyEscape);
+
+    while (RGFW_window_shouldClose(win) == RGFW_FALSE) {
+        RGFW_pollEvents();
+
+        if (RGFW_isKeyPressed(RGFW_keyW))  {
+            RGFW_window_setFullscreen(win, RGFW_fullscreenBorderless);
+        } else if (RGFW_isKeyPressed(RGFW_keyE)) {
+            RGFW_window_setFullscreen(win, RGFW_fullscreenExclusive);
+        } else if (RGFW_isKeyPressed(RGFW_keyQ)) {
+            RGFW_window_setFullscreen(win, RGFW_fullscreenNone);
+        }
+    }
+
+    RGFW_window_close(win);
+    RGFW_deinit();
+    return 0;
+}

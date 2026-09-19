@@ -162,6 +162,7 @@ EXAMPLE_OUTPUTS = \
 	examples/callbacks/callbacks \
 	examples/state-checking/state-checking \
 	examples/flags/flags \
+	examples/fullscreen/fullscreen \
 	examples/monitor/monitor \
 	examples/gamma/gamma \
 	examples/gl33_ctx/gl33_ctx \
