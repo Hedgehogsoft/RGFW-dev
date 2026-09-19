@@ -4862,11 +4862,11 @@ RGFW_bool RGFW_monitor_findClosestMode(RGFW_monitor* monitor, RGFW_monitorMode* 
 		RGFW_monitorMode* mode2 = &modes[i];
 
 		u32 currColorScore = 0;
-        if (mode->red) currColorScore += RGFW_ABS(mode2->red - mode->red);
-        if (mode->blue) currColorScore += RGFW_ABS(mode2->green - mode->green);
-        if (mode->green) currColorScore += RGFW_ABS(mode2->blue - mode->blue);
+        if (mode->red) currColorScore += (u32)RGFW_ABS(mode2->red - mode->red);
+        if (mode->blue) currColorScore += (u32)RGFW_ABS(mode2->green - mode->green);
+        if (mode->green) currColorScore += (u32)RGFW_ABS(mode2->blue - mode->blue);
 
-        u32 currSizeScore = RGFW_ABS((mode2->w - mode->w) * (mode2->w- mode->w) +
+        u32 currSizeScore = (u32)RGFW_ABS((mode2->w - mode->w) * (mode2->w- mode->w) +
                        			 (mode2->h - mode->h) * (mode2->h - mode->h));
 
 
