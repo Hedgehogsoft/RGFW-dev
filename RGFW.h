@@ -257,6 +257,10 @@ int main() {
 	#define RGFW_ROUND(x) (i32)((x) >= 0 ? (x) + 0.5f : (x) - 0.5f)
 #endif
 
+#ifndef RGFW_ABS
+	#define RGFW_ABS(x) (((x) < 0) ? -(x) : (x))
+#endif
+
 #ifndef RGFW_ROUNDF
 	#define RGFW_ROUNDF(x) (float)((i32)((x) + ((x) < 0.0f ? -0.5f : 0.5f)))
 #endif
@@ -2078,7 +2082,7 @@ RGFWDEF void RGFW_window_maximize(RGFW_window* win);
 /**!
  * @brief toggles fullscreen mode for the window
  * @param win a pointer to the target window
- * @param fullscreen RGFW_TRUE to enable fullscreen, RGFW_FALSE to disable
+ * @param fullscreen the fullscreen mode to use RGFW_fullscreenNone, RGFW_fullscreenBorderless, RGFW_fullscreenExclusive
 */
 RGFWDEF void RGFW_window_setFullscreen(RGFW_window* win, RGFW_fullscreenMode mode);
 
@@ -4588,12 +4592,18 @@ void RGFW_window_center(RGFW_window* win) {
 }
 
 RGFW_bool RGFW_monitor_scaleToWindow(RGFW_monitor* mon, RGFW_window* win) {
-	RGFW_monitorMode mode;
     RGFW_ASSERT(win != NULL);
 
+	RGFW_monitorMode mode = mon->mode;
 	mode.w = win->w;
 	mode.h = win->h;
 	RGFW_bool ret = RGFW_monitor_requestMode(mon, &mode, RGFW_monitorScale);
+	if (ret == RGFW_FALSE) {
+		RGFW_monitorMode closest;
+		ret = RGFW_monitor_findClosestMode(mon, &mode, &closest);
+		if (ret == FALSE) { return ret; }
+		ret = RGFW_monitor_setMode(mon, &closest);
+	}
 
 	/* move window to monitor origin so it doesn't move to the next monitor */
 	RGFW_window_move(win, mon->x, mon->y);
@@ -4844,24 +4854,39 @@ RGFW_bool RGFW_monitor_findClosestMode(RGFW_monitor* monitor, RGFW_monitorMode* 
 	count = RGFW_monitor_getModesPtr(monitor, &modes);
 
 	RGFW_monitorMode* chosen = NULL;
+    u32 sizeScore = UINT_MAX;
+    u32 rateScore = UINT_MAX;
+    u32 colorScore = UINT_MAX;	
 
-	u32 topScore = 1;
 	for (size_t i = 0; i < count; i++) {
 		RGFW_monitorMode* mode2 = &modes[i];
 
-		u32 score = 0;
-		if (mode->w == mode2->w && mode->h == mode2->h) score += 1000;
-		if (mode->red == mode2->red && mode->green == mode2->green && mode->blue == mode2->blue) score += 100;
-		if (mode->refreshRate == mode->refreshRate) score += 10;
+		u32 currColorScore = 0;
+        if (mode->red) currColorScore += RGFW_ABS(mode2->red - mode->red);
+        if (mode->blue) currColorScore += RGFW_ABS(mode2->green - mode->green);
+        if (mode->green) currColorScore += RGFW_ABS(mode2->blue - mode->blue);
 
-		if (score > topScore) {
-			topScore = score;
-			chosen = mode2;
-		}
+        u32 currSizeScore = RGFW_ABS((mode2->w - mode->w) * (mode2->w- mode->w) +
+                       			 (mode2->h - mode->h) * (mode2->h - mode->h));
+
+
+		u32 currRateScore;
+        if (mode->refreshRate != 0)
+            currRateScore = (u32)RGFW_ABS(mode2->refreshRate - mode->refreshRate);
+        else
+            currRateScore = UINT_MAX - (u32)mode->refreshRate;
+
+        if ((currColorScore < colorScore) ||
+            (currColorScore == colorScore && currSizeScore < sizeScore) ||
+            (currColorScore == colorScore && currSizeScore == sizeScore && currRateScore < rateScore)) {
+            sizeScore = currSizeScore;
+            rateScore = currRateScore;
+            colorScore = currColorScore;
+            chosen = mode2;
+        }
 	}
 
 	if (chosen && closest) *closest = *chosen;
-
 
 	RGFW_FREE(modes);
 
@@ -13740,7 +13765,7 @@ static void RGFW__osxKeyDown(id self, SEL _cmd, id event) {
 	RGFW_UNUSED(_cmd);
 	RGFW_window* win = NULL;
     object_getInstanceVariable(self, "RGFW_window", (void**)&win);
-	if (win == NULL || !(win->internal.enabledEvents & RGFW_keyPressedFlag)) return;
+	if (win == NULL || !(win->internal.enabledEvents & RGFW_/eyPressedFlag)) return;
 
     u32 key = (u16)((u32(*)(id, SEL))objc_msgSend)(event, sel_registerName("keyCode"));
 
