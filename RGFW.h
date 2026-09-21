@@ -4870,13 +4870,10 @@ RGFW_bool RGFW_monitor_findClosestMode(RGFW_monitor* monitor, RGFW_monitorMode* 
                        			 (mode2->h - mode->h) * (mode2->h - mode->h));
 
 
-		u32 currRateScore;
-        if (mode->refreshRate != 0)
-            currRateScore = (u32)RGFW_ABS(mode2->refreshRate - mode->refreshRate);
-        else
-            currRateScore = UINT_MAX - (u32)mode->refreshRate;
+		u32 currRateScore = UINT_MAX - (u32)mode2->refreshRate;
+		currRateScore = (u32)RGFW_ABS(mode2->refreshRate - mode->refreshRate);
 
-        if ((currColorScore < colorScore) ||
+		if ((currColorScore < colorScore) ||
             (currColorScore == colorScore && currSizeScore < sizeScore) ||
             (currColorScore == colorScore && currSizeScore == sizeScore && currRateScore < rateScore)) {
             sizeScore = currSizeScore;
