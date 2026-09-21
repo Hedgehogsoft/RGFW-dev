@@ -368,10 +368,10 @@ int main() {
 #define RGFW_HEADER
 
 #include <stddef.h>
+#include <limits.h>
 
 #ifndef RGFW_INT_DEFINED
 	#ifdef RGFW_USE_INT /* optional for any system that might not have stdint.h */
-		#include <limits.h>
 		typedef unsigned char       u8;
 		typedef signed char         i8;
 		typedef unsigned short     u16;
@@ -4601,7 +4601,7 @@ RGFW_bool RGFW_monitor_scaleToWindow(RGFW_monitor* mon, RGFW_window* win) {
 	if (ret == RGFW_FALSE) {
 		RGFW_monitorMode closest;
 		ret = RGFW_monitor_findClosestMode(mon, &mode, &closest);
-		if (ret == FALSE) { return ret; }
+		if (ret == RGFW_FALSE) { return ret; }
 		ret = RGFW_monitor_setMode(mon, &closest);
 	}
 
