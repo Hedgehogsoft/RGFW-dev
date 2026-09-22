@@ -3109,7 +3109,7 @@ typedef struct RGFW_windowInternal {
 	RGFW_eventFlag enabledEvents;
 	u32 flags; /*!< windows flags (for RGFW to check and modify) */
 	i32 oldX, oldY, oldW, oldH;
-	RGFW_bool oldBorder;
+	RGFW_bool oldBorderless;
 	RGFW_monitor* monitor;
 	RGFW_monitorMode oldMode, newMode;
 	RGFW_mouse* mouse;
@@ -5219,12 +5219,17 @@ void RGFW_window_setFullscreen(RGFW_window* win, RGFW_fullscreenMode fullscreen)
 			return;
 	}
 
+	if ((fullscreen == RGFW_fullscreenExclusive && RGFW_BOOL(win->internal.flags & RGFW_windowFullscreenBorderless)) || 
+		(fullscreen == RGFW_fullscreenBorderless && (win->internal.flags & RGFW_windowFullscreenExclusive))) {
+		RGFW_window_setFullscreen(win, RGFW_fullscreenNone);
+	}
+	
 	if (fullscreen) {
 		win->internal.oldX = win->x;
 		win->internal.oldY = win->y;
 		win->internal.oldW = win->w;
 		win->internal.oldH = win->h;
-		win->internal.oldBorder = RGFW_window_borderless(win);
+		win->internal.oldBorderless = RGFW_window_borderless(win);
 		RGFW_window_setBorder(win, 0);
 		RGFW_window_move(win, 0, 0);
 
@@ -5251,7 +5256,7 @@ void RGFW_window_setFullscreen(RGFW_window* win, RGFW_fullscreenMode fullscreen)
 			RGFW_monitor_setMode(win->internal.monitor, &win->internal.oldMode);
 		}
 
-		RGFW_window_setBorder(win, win->internal.oldBorder);
+		RGFW_window_setBorder(win, !win->internal.oldBorderless);
 
 		RGFW_window_move(win, win->internal.oldX, win->internal.oldY);
 		RGFW_window_resize(win, win->internal.oldW, win->internal.oldH);
