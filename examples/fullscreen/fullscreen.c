@@ -21,10 +21,13 @@ int main(void) {
         RGFW_pollEvents();
 
         if (RGFW_isKeyPressed(RGFW_keyW))  {
+			printf("using borderless fullscreen\n");
             RGFW_window_setFullscreen(win, RGFW_fullscreenBorderless);
         } else if (RGFW_isKeyPressed(RGFW_keyE)) {
+			printf("using exclusive fullscreen\n");
             RGFW_window_setFullscreen(win, RGFW_fullscreenExclusive);
         } else if (RGFW_isKeyPressed(RGFW_keyQ)) {
+			printf("fullscreen disabled\n");
             RGFW_window_setFullscreen(win, RGFW_fullscreenNone);
         }
 
